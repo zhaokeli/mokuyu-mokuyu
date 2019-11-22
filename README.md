@@ -10,7 +10,7 @@ composer require mokuyu/mokuyu
 include __dir__.'/CacheInterface.php';
 ```
 
-本数据库类的开发吸取medoo(符号查询)和thinkphp(连贯操作)的特点，感谢以上两个开源库
+本数据库类的开发吸取medoo(符号查询)和thinkphp(连贯操作)的特点，集各家之所长,感谢以上两个开源库
 [toc]
 
 ## 数据库规范
