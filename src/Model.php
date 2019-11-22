@@ -54,13 +54,15 @@ abstract class Model
     public function __construct(Mokuyu $db)
     {
         if ($this->tableName === '') {
-            $tname = get_class($this);
-            //如果直接传来一个表名字的话就直接使用,如果是带命令空间的话要把 \ 去掉
-            $wz = strrpos($tname, '\\');
-            if ($wz !== false) {
-                $tname = substr($tname, $wz + 1);
-            }
-            $this->tableName = $tname;
+            // $tname = get_class($this);
+            // //如果直接传来一个表名字的话就直接使用,如果是带命令空间的话要把 \ 去掉
+            // $wz = strrpos($tname, '\\');
+            // if ($wz !== false) {
+            //     $tname = substr($tname, $wz + 1);
+            // }
+            // $this->tableName = $tname;
+            $this->tableName = basename(str_replace('\\', '/', static::class));
+
         }
         $this->db = $db;
     }
