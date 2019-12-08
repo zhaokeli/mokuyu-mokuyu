@@ -2024,6 +2024,9 @@ eot;
      */
     protected function summary(string $func, array $field)
     {
+        if ($this->queryParams['field']) {
+            $field = explode(',', $this->queryParams['field']);
+        }
         $arr = ['COUNT', 'AVG', 'MAX', 'MIN', 'SUM'];
         if (!in_array($func, $arr) || !$this->queryParams['table']) {
             return 0;
@@ -2044,15 +2047,20 @@ eot;
             }
             $value = $func . '(' . $fie . ') AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
         });
+
         $this->field($field);
-        $data = $this->get();
+        $data = $this->select();
         if (is_string($data) || is_numeric($data)) {
             return $data ?: 0;
         }
         if ($data) {
             if (count($field) === 1) {
-                //单个字段直接返回
-                return $data[$field] ?: 0;
+                //单个字段的统计直接返回
+                $info = $this->parseFormatField($field[0]);
+                $fie  = $info['alias'] ?: $info['field'];
+
+                return array_sum(array_column($data, $fie));
+
             } else {
                 //多个字段就返回数组
                 return $data ?: 0;
