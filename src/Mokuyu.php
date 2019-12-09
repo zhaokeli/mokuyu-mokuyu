@@ -520,6 +520,13 @@ class Mokuyu
         return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
     }
 
+    public function forceIndex($field)
+    {
+        $this->queryParams['forceIndex'] = $field;
+
+        return $this;
+    }
+
     /**
      * 取数据如果字段是一个的话直接返回这个字段的值，如果是一行记录的话就返回一个数组
      * @return [type] [description]
@@ -1193,6 +1200,29 @@ eot;
         $this->queryParams['field'] = $this->parseSelectFields($field);
     }
 
+    protected function buildForceIndex(): void
+    {
+        $index = $this->queryParams['forceIndex'];
+        if ($index) {
+            $info = $this->parseFormatField($index);
+            switch ($this->databaseType) {
+                case 'mysql':
+                    $this->queryParams['forceIndex'] = ' FORCE INDEX (' . $info['field'] . ') ';
+                    break;
+                case 'sqlite':
+                    $this->queryParams['forceIndex'] = ' INDEXED BY ' . $info['field'] . ' ';
+                    break;
+                case 'oracle':
+                    $this->queryParams['forceIndex'] = ' /*+index(' . $info['table'] . ' ' . $info['field'] . ')*/ ';
+                    break;
+                default:
+                    $this->queryParams['forceIndex'] = '';
+                    break;
+            }
+
+        }
+    }
+
     protected function buildGroup()
     {
         $data = $this->queryParams['group'];
@@ -1447,12 +1477,22 @@ eot;
         $join   = $map['join'];
         $field  = $map['field'];
         $group  = $map['group'];
+        $index  = $map['forceIndex'];
         $temsql = '';
         if ((empty($table) && empty($join)) || (empty($field) && empty($join))) {
             return '';
         }
+        $sql = '';
+        switch ($this->databaseType) {
+            case 'mysql':
+            case 'sqlite':
+                $sql = 'SELECT ' . $field . ' FROM ' . $table . $index . ' ' . $join . ' ' . $where . ' ' . $group . ' ' . $order . ' ' . $limit;
+                break;
+            case 'oracle':
+                $sql = 'SELECT ' . $index . $field . ' FROM ' . $table . ' ' . $join . ' ' . $where . ' ' . $group . ' ' . $order . ' ' . $limit;
+        }
 
-        return 'SELECT ' . $field . ' FROM ' . $table . ' ' . $join . ' ' . $where . ' ' . $group . ' ' . $order . ' ' . $limit;
+        return $sql;
 
     }
 
@@ -1464,6 +1504,7 @@ eot;
         $this->buildWhere();
         $this->buildOrder();
         $this->buildGroup();
+        $this->buildForceIndex();
 
     }
 
@@ -1638,16 +1679,18 @@ eot;
         $this->temTableMode    = $this->tableMode;
         $this->fieldMap        = [];
         $this->queryParams     = [
-            'table'    => '',
-            'srcTable' => '', //传入的原始表
-            'join'     => [],
-            'where'    => [],
-            'order'    => '',
-            'rand'     => false,
-            'group'    => '',
-            'limit'    => '',
-            'field'    => '*',
-            'data'     => '',
+            'table'      => '',
+            'srcTable'   => '', //传入的原始表
+            'join'       => [],
+            'where'      => [],
+            'order'      => '',
+            'rand'       => false,
+            'group'      => '',
+            'limit'      => '',
+            'field'      => '*',
+            'data'       => '',
+            //强制使用索引,mysql查询的时候用
+            'forceIndex' => '',
         ];
         $this->bindParam = [];
     }
