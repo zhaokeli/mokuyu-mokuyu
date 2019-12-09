@@ -2049,7 +2049,17 @@ eot;
         });
 
         $this->field($field);
-        $data = $this->select();
+        if ($this->queryParams['group']) {
+            //如果有分组去复的话会有多条记录,需要放到子sql中统计
+            // $map  = $this->getWhere();
+            $this->buildSqlConf();
+            $sql   = $this->buildSelect();
+            $query = $this->query('SELECT ' . implode(',', $field) . ' FROM (' . $sql . ') tem');
+            $data  = $query->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $data = $this->select();
+        }
+
         if (is_string($data) || is_numeric($data)) {
             return $data ?: 0;
         }
@@ -2059,7 +2069,8 @@ eot;
                 $info = $this->parseFormatField($field[0]);
                 $fie  = $info['alias'] ?: $info['field'];
 
-                return array_sum(array_column($data, $fie));
+                return $data[0][$fie];
+                // return array_sum(array_column($data, $fie));
 
             } else {
                 //多个字段就返回数组
