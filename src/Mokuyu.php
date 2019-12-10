@@ -1277,7 +1277,7 @@ eot;
                             foreach ($relation as $key => $value) {
                                 $newarr[] = $this->joinField($value, false);
                             }
-                            $relation = 'USING (' . implode($newarr, ',') . ')';
+                            $relation = 'USING (' . implode(',', $newarr) . ')';
                         } else {
                             //关联数组形式
                             $joins = [];
@@ -1296,7 +1296,7 @@ eot;
                                 $joins[] = $this->joinField($kinfo, false) . ' = ' . $this->joinField($vinfo, false);
                             }
 
-                            $relation = 'ON ' . implode($joins, ' AND ');
+                            $relation = 'ON ' . implode(' AND ', $joins);
                         }
                     }
                     $table_name = $this->tablePrefix($match[3]) . ' ';
@@ -1307,7 +1307,7 @@ eot;
                     $table_join[] = $joinString . ' JOIN ' . $table_name . $relation;
                 }
             }
-            $this->queryParams['join'] = ' ' . implode($table_join, ' ');
+            $this->queryParams['join'] = ' ' . implode(' ', $table_join);
         }
     }
 
@@ -2023,7 +2023,7 @@ eot;
             $stack[] = $field;
         }
 
-        return implode($stack, ',');
+        return implode(',', $stack);
     }
 
     /**
