@@ -256,7 +256,9 @@ class Mokuyu
 
             return $this->pdoRead;
         }
-        throw new PDOException('Method is not exist!', 1);
+
+        return $this->$name;
+        // throw new PDOException('Method is not exist: ' . $name, 1);
     }
 
     /**
