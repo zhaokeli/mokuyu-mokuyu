@@ -21,7 +21,7 @@ use Psr\SimpleCache\CacheInterface;
 class Mokuyu
 {
     /**
-     * sql中绑定的参数数组
+     * query中绑定的参数数组
      * @var array
      */
     protected $bindParam = [];
@@ -32,10 +32,22 @@ class Mokuyu
      */
     protected $cache = null;
 
+    /**
+     * 数据库数据集
+     * @var [type]
+     */
     protected $charset;
 
+    /**
+     * sqlite数据文件
+     * @var [type]
+     */
     protected $databaseFile;
 
+    /**
+     * 数据库名字
+     * @var [type]
+     */
     protected $databaseName;
 
     /**
@@ -80,6 +92,12 @@ class Mokuyu
     protected $fieldMode = 0;
 
     /**
+     * 数据库配置
+     * @var array
+     */
+    protected $hostList = [];
+
+    /**
      * 是否返回sql语句,true则返回语句,false返回对应的数据
      * @var boolean
      */
@@ -91,30 +109,40 @@ class Mokuyu
      */
     protected $logs = [];
 
+    /**
+     * pdo配置项
+     * @var [type]
+     */
     protected $options = [
-        PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION, // 抛出 exceptions 异常。
-        PDO::ATTR_ORACLE_NULLS      => PDO::NULL_TO_STRING,    //将 NULL 转换成空字符串
-        PDO::ATTR_EMULATE_PREPARES  => false,                  //禁用本地模拟prepare
-                                                               // PDO::ATTR_PERSISTENT        => true, //长连接
-        PDO::ATTR_STRINGIFY_FETCHES => false,                  //提取的时候将数值转换为字符串
+        // 抛出 exceptions 异常。
+        PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION,
+        //将 NULL 转换成空字符串
+        PDO::ATTR_ORACLE_NULLS      => PDO::NULL_TO_STRING,
+        //禁用本地模拟prepare
+        PDO::ATTR_EMULATE_PREPARES  => false,
+        //长连接
+        // PDO::ATTR_PERSISTENT        => true,
+        //提取的时候将数值转换为字符串
+        PDO::ATTR_STRINGIFY_FETCHES => false,
     ];
 
+    /**
+     * 数据库密码
+     * @var [type]
+     */
     protected $password;
 
     /**
-     * pdo 读写对象和只读配置
-     * @var null
+     * 端口
+     * @var [type]
      */
-    protected $pdo = null;
-
-    protected $pdoRead = null;
-
-    // For MySQL or MariaDB with unix_socket
     protected $port;
 
+    /**
+     * 数据库前缀
+     * @var [type]
+     */
     protected $prefix;
-
-    //只读数据库配置
 
     /**
      * 每次执行请求的SQL参数组合
@@ -122,14 +150,14 @@ class Mokuyu
      */
     protected $queryParams = [];
 
-    protected $read = [];
-
+    /**
+     * 数据库连接服务器
+     * @var [type]
+     */
     protected $server;
 
     // For SQLite
     protected $socket;
-
-    //单次查询临时字段风格
 
     /**
      * 数据表风格,把传入的表名转为下面
@@ -138,9 +166,11 @@ class Mokuyu
      */
     protected $tableMode = 1;
 
+    /**
+     * 用户名
+     * @var [type]
+     */
     protected $username;
-
-    //单次查询临时表风格
 
     /**
      * 关键字引号
@@ -154,10 +184,16 @@ class Mokuyu
      */
     private $cacheKeys = [];
 
-    //全局字段风格
-    private $temFieldModeTem = 0;
+    /**
+     * 字段风格
+     * @var integer
+     */
+    private $temFieldMode = 0;
 
-    //全局数据表样式
+    /**
+     * 数据表风格
+     * @var integer
+     */
     private $temTableMode = 0;
 
     /**
@@ -173,11 +209,54 @@ class Mokuyu
             $option        = $this->parseName($option, 2);
             $this->$option = $value;
         }
-        $this->temFieldModeTem = $this->fieldMode;
-        $this->temTableMode    = $this->tableMode;
-        $this->dbConfig        = $config;
+        // 解析配置
+        $servers   = explode(',', $this->server);
+        $ports     = explode(',', $this->port . '');
+        $usernames = explode(',', $this->username);
+        $passwords = explode(',', $this->password);
+        foreach ($servers as $key => $value) {
+            $arr                              = explode(':', trim($value));
+            $this->hostList[$arr[1] ?? 'w'][] = [
+                'server'   => $arr[0],
+                'port'     => $ports[$key] ?? end($ports),
+                'username' => $usernames[$key] ?? end($usernames),
+                'password' => $password[$key] ?? end($passwords),
+            ];
+        }
+        if (!$this->hostList['w']) {
+            throw new PDOException('Write Db is not exist!', 1);
+        }
+        $this->temFieldMode = $this->fieldMode;
+        $this->temTableMode = $this->tableMode;
+        $this->dbConfig     = $config;
         $this->initQueryParams();
-        $this->pdo = $this->buildPDO($config);
+    }
+
+    /**
+     * 自动初始化连接
+     * @authname [权限名字]     0
+     * @DateTime 2019-12-11
+     * @Author   mokuyu
+     *
+     * @param  [type]   $name [description]
+     * @return [type]
+     */
+    public function __get($name)
+    {
+        if ($name === 'pdo') {
+            $this->pdo = $this->buildPDO($this->hostList['w'][array_rand($this->hostList['w'])]);
+
+            return $this->pdo;
+        } else if ($name === 'pdoRead') {
+            if (isset($this->hostList['r'])) {
+                $this->pdoRead = $this->buildPDO($this->hostList['r'][array_rand($this->hostList['r'])]);
+            } else {
+                $this->pdoRead = null;
+            }
+
+            return $this->pdoRead;
+        }
+        throw new PDOException('Method is not exist!', 1);
     }
 
     /**
@@ -186,6 +265,7 @@ class Mokuyu
      */
     public function add(array $datas)
     {
+
         $this->buildSqlConf();
         $table = $this->queryParams['table'];
         if (empty($table)) {
@@ -295,6 +375,7 @@ class Mokuyu
      */
     public function beginTransaction()
     {
+
         $this->pdo->beginTransaction();
     }
 
@@ -338,6 +419,7 @@ class Mokuyu
 
     public function delete(int $id = 0)
     {
+
         if (empty($this->queryParams['table'])) {
             return 0;
         }
@@ -489,7 +571,7 @@ class Mokuyu
         if ($type > 2 || $type < 0) {
             throw new InvalidArgumentException('fieldMode must be numeric(0,1,2)!');
         }
-        $this->temFieldModeTem = $type;
+        $this->temFieldMode = $type;
 
         return $this;
     }
@@ -913,11 +995,7 @@ eot;
             if ($this->debugMode) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
-            $this->initReadPDO();
-            $pdo = $this->pdo;
-            if ($this->pdoRead !== null && $this->pdoRead !== false) {
-                $pdo = $this->pdoRead;
-            }
+            $pdo   = $this->pdoRead ?: $this->pdo;
             $t1    = microtime(true);
             $query = null;
             if ($hasParam) {
@@ -1078,6 +1156,7 @@ eot;
 
     public function update(array $data)
     {
+
         if (empty($this->queryParams['table'])) {
             return 0;
         }
@@ -1370,24 +1449,29 @@ eot;
             $commands = [];
             $dsn      = '';
 
-            if (is_array($options)) {
-                foreach ($options as $option => $value) {
-                    $option        = $this->parseName($option, 2);
-                    $this->$option = $value;
-                }
-            } else {
-                return null;
-            }
-            if (isset($this->port) && is_int($this->port * 1)) {
-                $port = $this->port;
-            }
+            // if (is_array($options)) {
+            //     foreach ($options as $option => $value) {
+            //         $option        = $this->parseName($option, 2);
+            //         $this->$option = $value;
+            //     }
+            // } else {
+            //     return null;
+            // }
+
+            // if (isset($this->port) && is_int($this->port * 1)) {
+            // $port = $this->port;
+            // }
+            $server   = $options['server'];
+            $port     = $options['port'];
+            $username = $options['username'];
+            $password = $options['password'];
 
             $type    = strtolower($this->databaseType);
             $is_port = isset($port);
 
-            if (isset($options['prefix'])) {
-                $this->prefix = $options['prefix'];
-            }
+            // if (isset($options['prefix'])) {
+            //     $this->prefix = $options['prefix'];
+            // }
 
             switch ($type) {
                 case 'mariadb':
@@ -1397,7 +1481,7 @@ eot;
                     if ($this->socket) {
                         $dsn = $type . ':unix_socket=' . $this->socket . ';dbname=' . $this->databaseName;
                     } else {
-                        $dsn = $type . ':host=' . $this->server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
+                        $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
                     }
 
                     // Make MySQL using standard quoted identifier
@@ -1405,16 +1489,16 @@ eot;
                     break;
 
                 case 'pgsql':
-                    $dsn = $type . ':host=' . $this->server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
+                    $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
                     break;
 
                 case 'sybase':
-                    $dsn = 'dblib:host=' . $this->server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                    $dsn = 'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
                     break;
 
                 case 'oracle':
-                    $dbname = $this->server ?
-                    '//' . $this->server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName :
+                    $dbname = $server ?
+                    '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName :
                     $this->databaseName;
 
                     $dsn = 'oci:dbname=' . $dbname . ($this->charset ? ';charset=' . $this->charset : '');
@@ -1422,8 +1506,8 @@ eot;
 
                 case 'mssql':
                     $dsn = strstr(PHP_OS, 'WIN') ?
-                    'sqlsrv:server=' . $this->server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName :
-                    'dblib:host=' . $this->server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                    'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName :
+                    'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
 
                     // Keep MSSQL QUOTED_IDENTIFIER is ON for standard quoting
                     $commands[] = 'SET QUOTED_IDENTIFIER ON';
@@ -1448,8 +1532,8 @@ eot;
             }
             $pdo = new PDO(
                 $dsn,
-                $this->username,
-                $this->password,
+                $username,
+                $password,
                 $this->options
             );
 
@@ -1602,8 +1686,8 @@ eot;
     protected function cacheAction(string $key, $value = null)
     {
         $key = 'mokuyu.' . $key;
-        if (!isset($this->cacheKey[$key])) {
-            $this->cacheKey[$key] = true;
+        if (!isset($this->cacheKeys[$key])) {
+            $this->cacheKeys[$key] = true;
         }
         if ($this->debug) {
             return null;
@@ -1675,10 +1759,10 @@ eot;
     protected function initQueryParams(): void
     {
         //重置为全局风格
-        $this->temFieldModeTem = $this->fieldMode;
-        $this->temTableMode    = $this->tableMode;
-        $this->fieldMap        = [];
-        $this->queryParams     = [
+        $this->temFieldMode = $this->fieldMode;
+        $this->temTableMode = $this->tableMode;
+        $this->fieldMap     = [];
+        $this->queryParams  = [
             'table'      => '',
             'srcTable'   => '', //传入的原始表
             'join'       => [],
@@ -1693,25 +1777,6 @@ eot;
             'forceIndex' => '',
         ];
         $this->bindParam = [];
-    }
-
-    /**
-     * 初始化数据库读对象
-     * @DateTime 2019-11-05
-     * @Author   mokuyu
-     *
-     * @return [type]
-     */
-    protected function initReadPDO(): void
-    {
-        if ($this->pdoRead === false || !$this->read) {
-            $this->pdoRead = false;
-
-            return;
-        }
-        if ($this->pdoRead === null) {
-            $this->pdoRead = $this->buildPDO($this->read);
-        }
     }
 
     /**
@@ -1812,9 +1877,9 @@ eot;
             // $arr['isMap'] = true;
         }
         //按字段模式转换
-        if ($this->temFieldModeTem === 1) {
+        if ($this->temFieldMode === 1) {
             $arr['field'] = $thsi->parseName($arr['field']);
-        } else if ($this->temFieldModeTem === 2) {
+        } else if ($this->temFieldMode === 2) {
             $arr['field'] = $thsi->parseName($arr['field'], 3);
         }
 

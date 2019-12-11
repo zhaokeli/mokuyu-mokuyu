@@ -36,12 +36,12 @@ $db = new \mokuyu\database\Mokuyu([
   // 必须配置项
   'database_type' => 'mysql',
   'database_name' => '******',
-  'server'        => 'localhost',
-  'username'      => '*****',
-  'password'      => '******',
+  //服务器 :w写数据 :r读数据，如果不设置标识则视为读写
+  'server'        => 'localhost,192.168.0.2:r',
+  'username'      => '*****,****',//如果长度和server不够以最后一个为准
+  'password'      => '******,****',//如果长度和server不够以最后一个为准
+  'port'          => '3306,3306',//如果长度和server不够以最后一个为准
   'charset'       => 'utf8',
-  // 可选参数
-  'port'          => 3306,
   /**
    *  可选参数
    * 字段风格,把传入的字段转为下面,也可以在查询时使用fieldMode()设置临时风格
@@ -52,13 +52,6 @@ $db = new \mokuyu\database\Mokuyu([
 
   // 可选参数，定义表的前缀
   'prefix'        => 'kl_',
-  // 可选参数 设置只读服务器配置
-  'read'=>[
-    'server'        => 'localhost',
-    'username'      => '*****',
-    'password'      => '******',
-    'port'          => 3306,
-  ]
 ]);
 ```
 ### 连接pgsql
