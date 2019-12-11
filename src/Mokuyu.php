@@ -243,15 +243,15 @@ class Mokuyu
      */
     public function __get($name)
     {
-        if ($name === 'pdo') {
-            $this->pdo = $this->buildPDO($this->hostList['w'][array_rand($this->hostList['w'])]);
+        if ($name === 'pdoWrite') {
+            $this->pdoWrite = $this->buildPDO($this->hostList['w'][array_rand($this->hostList['w'])]);
 
-            return $this->pdo;
+            return $this->pdoWrite;
         } else if ($name === 'pdoRead') {
             if (isset($this->hostList['r'])) {
                 $this->pdoRead = $this->buildPDO($this->hostList['r'][array_rand($this->hostList['r'])]);
             } else {
-                $this->pdoRead = null;
+                $this->pdoRead = $this->pdoWrite;
             }
 
             return $this->pdoRead;
@@ -327,7 +327,7 @@ class Mokuyu
         }
         // $lastId = ;
 
-        return $this->pdo->lastInsertId() ?: $result;
+        return $this->pdoWrite->lastInsertId() ?: $result;
     }
 
     /**
@@ -376,7 +376,7 @@ class Mokuyu
     public function beginTransaction()
     {
 
-        $this->pdo->beginTransaction();
+        $this->pdoWrite->beginTransaction();
     }
 
     /**
@@ -402,7 +402,7 @@ class Mokuyu
      */
     public function commit()
     {
-        $this->pdo->commit();
+        $this->pdoWrite->commit();
     }
 
     public function count($field = '*')
@@ -484,7 +484,7 @@ class Mokuyu
             $t1     = microtime(true);
             $result = false;
             if ($hasParam) {
-                $sth = $this->pdo->prepare($sql);
+                $sth = $this->pdoWrite->prepare($sql);
 
                 if (count($this->bindParam) == count($this->bindParam, 1)) {
                     $sth->execute($this->bindParam);
@@ -500,18 +500,18 @@ class Mokuyu
                 }
                 $result = $sth->rowCount();
             } else {
-                $result = $this->pdo->exec($sql);
+                $result = $this->pdoWrite->exec($sql);
             }
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
             $this->appendSqlLogs(($t2 - $t1), $sql, $this->bindParam);
             //因为exec执行的命令不一定会有影响的行数,下面判断执行的状态码
             if (!$result) {
-                $err = $this->pdo->errorInfo();
+                $err = $this->pdoWrite->errorInfo();
                 if ($err[0] === '00000' || $err[0] === '01000') {
                     $result = true;
                 } else {
-                    $this->errors[] = $this->pdo->errorInfo()[2];
+                    $this->errors[] = $this->pdoWrite->errorInfo()[2];
                     $this->showError(end($this->errors));
                     $result = false;
                 }
@@ -686,7 +686,7 @@ class Mokuyu
                     $ckey .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
-                        $tm = $this->pdo->prepare($sql);
+                        $tm = $this->pdoRead->prepare($sql);
                         $tm->execute();
                         $fieldArr = $tm->fetchAll(PDO::FETCH_COLUMN);
                     }
@@ -697,7 +697,7 @@ class Mokuyu
                     $ckey .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
-                        $info = $this->pdo->query($sql);
+                        $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
@@ -710,7 +710,7 @@ class Mokuyu
                     $ckey .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
-                        $info = $this->pdo->query($sql);
+                        $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
@@ -739,9 +739,18 @@ class Mokuyu
         return end($this->logs);
     }
 
-    public function getPDO(): PDO
+    /**
+     * 返回pdo对象,
+     * @authname [权限名字]       0
+     * @DateTime 2019-12-11
+     * @Author   mokuyu
+     *
+     * @param  bool|boolean $isWrite 返回的对象为读or写,默认为读连接
+     * @return [type]
+     */
+    public function getPDO(bool $isWrite = false): PDO
     {
-        return $this->pdo;
+        return $isWrite ? $this->pdoWrite : $this->pdoRead;
     }
 
     /**
@@ -764,7 +773,7 @@ class Mokuyu
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
-                        $info = $this->pdo->query($sql);
+                        $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info        = $info->fetchAll(PDO::FETCH_ASSOC);
                             $primaryName = $info[0]['COLUMN_NAME'] ?? '';
@@ -778,7 +787,7 @@ class Mokuyu
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
-                        $info = $this->pdo->query($sql);
+                        $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
@@ -804,7 +813,7 @@ eot;
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
-                        $info = $this->pdo->query($sql);
+                        $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
@@ -890,7 +899,7 @@ eot;
         ];
 
         foreach ($output as $key => $value) {
-            $output[$key] = $this->pdo->getAttribute(constant('PDO::ATTR_' . $value));
+            $output[$key] = $this->pdoWrite->getAttribute(constant('PDO::ATTR_' . $value));
         }
         $this->cacheAction('db_version_info', $output);
 
@@ -995,7 +1004,7 @@ eot;
             if ($this->debugMode) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
-            $pdo   = $this->pdoRead ?: $this->pdo;
+            $pdo   = $this->pdoRead ?: $this->pdoWrite;
             $t1    = microtime(true);
             $query = null;
             if ($hasParam) {
@@ -1043,7 +1052,7 @@ eot;
      */
     public function rollback()
     {
-        $this->pdo->rollBack();
+        $this->pdoWrite->rollBack();
     }
 
     /**
@@ -1133,21 +1142,21 @@ eot;
      */
     public function transaction(\Closure $callback)
     {
-        $this->pdo->beginTransaction();
+        $this->pdoWrite->beginTransaction();
         // We'll simply execute the given callback within a try / catch block
         // and if we catch any exception we can rollback the transaction
         // so that none of the changes are persisted to the database.
         try {
             $result = $callback($this);
 
-            $this->pdo->commit();
+            $this->pdoWrite->commit();
         }
 
         // If we catch an exception, we will roll back so nothing gets messed
         // up in the database. Then we'll re-throw the exception so it can
         // be handled how the developer sees fit for their applications.
          catch (Exception $e) {
-            $this->pdo->rollBack();
+            $this->pdoWrite->rollBack();
             throw $e;
         }
 
