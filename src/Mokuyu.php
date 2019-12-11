@@ -685,7 +685,7 @@ class Mokuyu
                         $info = $this->pdo->query($sql);
                         if ($info) {
                             $info        = $info->fetchAll(PDO::FETCH_ASSOC);
-                            $primaryName = isset($info[0]) ? $info[0]['COLUMN_NAME'] : '';
+                            $primaryName = $info[0]['COLUMN_NAME'] ?? '';
                         }
                     }
 
@@ -1345,7 +1345,7 @@ eot;
                     && !$info['table']) {
                     $field = $this->queryParams['table'] . '.' . $field;
                 }
-                $data[$key] = $field . ' ' . strtoupper((isset($arr[1]) ? $arr[1] : ''));
+                $data[$key] = $field . ' ' . strtoupper($arr[1] ?? '');
             }
 
         }
