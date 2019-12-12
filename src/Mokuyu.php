@@ -507,8 +507,11 @@ class Mokuyu
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
             $this->appendSqlLogs(($t2 - $t1), $sql, $this->bindParam);
-            //因为exec执行的命令不一定会有影响的行数,下面判断执行的状态码
-            if (!$result) {
+            //因为exec执行的命令除了 select insert update外不一定会有影响的行数,下面判断执行的状态码
+            if (!$result
+                && stripos(trim($sql), 'select') !== 0
+                && stripos(trim($sql), 'update') !== 0
+                && stripos(trim($sql), 'insert') !== 0) {
                 $err = $this->pdoWrite->errorInfo();
                 if ($err[0] === '00000' || $err[0] === '01000') {
                     $result = true;
