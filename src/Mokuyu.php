@@ -2146,13 +2146,16 @@ eot;
      */
     protected function summary(string $func, array $field)
     {
-        if ($this->queryParams['field']) {
+        //如果之前通过field方法传过字段就设置上去，*为默认,排除
+        if ($this->queryParams['field'] && $this->queryParams['field'] !== '*') {
             $field = explode(',', $this->queryParams['field']);
         }
-        $arr = ['COUNT', 'AVG', 'MAX', 'MIN', 'SUM'];
-        if (!in_array($func, $arr) || !$this->queryParams['table']) {
+        $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
+        if (!isset($arr[$func]) || !$this->queryParams['table']) {
             return 0;
         }
+
+        //字段转成数组
         if (count($field) == 1) {
             if (is_array($field[0])) {
                 $field = $field[0];
@@ -2160,6 +2163,8 @@ eot;
                 $field = explode(',', $field[0]);
             }
         }
+
+        //给字段加上函数
         $obj = $this;
         array_walk($field, function (&$value, $key) use ($func, $obj) {
             $info = $obj->parseFormatField($value);
@@ -2170,6 +2175,7 @@ eot;
             $value = $func . '(' . $fie . ') AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
         });
 
+        //重新设置查询字段
         $this->field($field);
         if ($this->queryParams['group']) {
             //如果有分组去复的话会有多条记录,需要放到子sql中统计
