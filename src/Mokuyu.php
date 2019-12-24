@@ -507,8 +507,11 @@ class Mokuyu
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
             $this->appendSqlLogs(($t2 - $t1), $sql, $this->bindParam);
-            //因为exec执行的命令不一定会有影响的行数,下面判断执行的状态码
-            if (!$result) {
+            //因为exec执行的命令除了 select insert update外不一定会有影响的行数,下面判断执行的状态码
+            if (!$result
+                && stripos(trim($sql), 'select') !== 0
+                && stripos(trim($sql), 'update') !== 0
+                && stripos(trim($sql), 'insert') !== 0) {
                 $err = $this->pdoWrite->errorInfo();
                 if ($err[0] === '00000' || $err[0] === '01000') {
                     $result = true;
@@ -2143,13 +2146,16 @@ eot;
      */
     protected function summary(string $func, array $field)
     {
-        if ($this->queryParams['field']) {
+        //如果之前通过field方法传过字段就设置上去，*为默认,排除
+        if ($this->queryParams['field'] && $this->queryParams['field'] !== '*') {
             $field = explode(',', $this->queryParams['field']);
         }
-        $arr = ['COUNT', 'AVG', 'MAX', 'MIN', 'SUM'];
-        if (!in_array($func, $arr) || !$this->queryParams['table']) {
+        $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
+        if (!isset($arr[$func]) || !$this->queryParams['table']) {
             return 0;
         }
+
+        //字段转成数组
         if (count($field) == 1) {
             if (is_array($field[0])) {
                 $field = $field[0];
@@ -2157,6 +2163,8 @@ eot;
                 $field = explode(',', $field[0]);
             }
         }
+
+        //给字段加上函数
         $obj = $this;
         array_walk($field, function (&$value, $key) use ($func, $obj) {
             $info = $obj->parseFormatField($value);
@@ -2167,6 +2175,7 @@ eot;
             $value = $func . '(' . $fie . ') AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
         });
 
+        //重新设置查询字段
         $this->field($field);
         if ($this->queryParams['group']) {
             //如果有分组去复的话会有多条记录,需要放到子sql中统计

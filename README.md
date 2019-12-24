@@ -50,7 +50,12 @@ $db = new \mokuyu\database\Mokuyu([
    * @var null
    **/
   'field_mode'  =>0,
-
+  /**
+   + 数据表风格,把传入的表名转为下面
+   + 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
+   + @var null
+   */
+  'table_mode'  =>1,
   // 可选参数，定义表的前缀
   'prefix'        => 'kl_',
 ]);
