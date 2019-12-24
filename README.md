@@ -1,12 +1,13 @@
 # Mokuyu数据库操作
 ## composer 安装方法
-```
+``` bash
+# install mokuyu
 composer require mokuyu/mokuyu
 ```
 ## 手动安装
 本库可以缓存字段等信息，使用psr标准缓存接口 Psr\SimpleCache\CacheInterface; 请自己引入缓存标准接口文件  
 [Psr\SimpleCache\CacheInterface 下载地址](https://github.com/php-fig/simple-cache/tree/master/src)
-```
+``` php
 include __dir__.'/CacheInterface.php';
 ```
 
@@ -31,7 +32,7 @@ include __dir__.'/CacheInterface.php';
 如果要加快查询速度，则可以设置缓存对象,数据库会把数据表字段等信息保存下来，加快查询速度，设置的缓存对象要实现 DbCache 接口
 ## 连接数据库
 ### 连接mysql
-```
+``` php
 $db = new \mokuyu\database\Mokuyu([
   // 必须配置项
   'database_type' => 'mysql',
@@ -55,7 +56,7 @@ $db = new \mokuyu\database\Mokuyu([
 ]);
 ```
 ### 连接pgsql
-```
+``` php
 $db = new \mokuyu\database\Mokuyu([
     // 必须配置项
     'database_type' => 'pgsql',
@@ -72,7 +73,7 @@ $db = new \mokuyu\database\Mokuyu([
 ]);
 ```
 ### 连接sqlite
-```
+``` php
 $db = new \mokuyu\database\Mokuyu([
   // 必须配置项
   'database_type' => 'sqlite',
@@ -85,7 +86,7 @@ $db = new \mokuyu\database\Mokuyu([
 
 ## 连贯操作
 >
-```
+``` php
 $db->table('user')
     ->field('user_id,username')
     ->where(['user_id'=>1])
@@ -116,7 +117,7 @@ $db->table('user')
 ### field()
 字段可以直接使用原生格式，不用加反引号,会自动识别并添加上
 
-```
+``` php
 $field=[
 'distinct(username)',
 'distinct(visitor.uuid)',
@@ -132,7 +133,7 @@ $field='distinct(username),password,nickname[name]';
 ```
 ### where()
 其中的and和or键可以任意嵌套，顶层默认为and连接
-```
+``` php
 $map=[
   'and'=>[
     'user_id'=>1,
@@ -163,7 +164,7 @@ $map=[
 * field[>]=>100 ====  field>100
 
 第二种，使用数组中传标识符
-```
+``` php
 $map=[
   'field'=>'1',
   'field'=>['in',['1','2','3']],
@@ -226,13 +227,13 @@ $map=[
 
 ## 原生SQL
 有返回值的使用query,
-```
+``` php
 //执行sql后，会自动返回所有数据
 $sql='select * from kl_event_log';
 $db->query($sql);
 ```
 如果是一些更新插入操作,没有返回值使用exec
-```
+``` php
 $db->exec("CREATE TABLE table (
   c1 INT STORAGE DISK,
   c2 INT STORAGE MEMORY
@@ -243,7 +244,7 @@ $db->exec("CREATE TABLE table (
 ```
 ## 添加数据
 成功返回自增id值,添加时要使用sql中的函数可在字段前面加个‘#’就可以使用,批量添加可以用多维数组，会自动使用事务进行操作，(表引擎要使用InnoDB),批量添加返回值不会返回自增id这点要注意
-```
+``` php
 $db->table('log')->add([
 'content'=>'neirong',
 '#addtime'=>'NOW()'
@@ -252,14 +253,14 @@ $db->table('log')->add([
 
 ## 更新数据
 成功返回影响行数
-```
+``` php
 $db->table('log')
     ->where(['id'=>1])
     ->update($data);
 ```
 条件为空时不更新任何数据,确实是想更新全表请传 1=1
 另外如果想在原有字段上执行算术运算可以用下面方法
-```
+``` php
 $db->table('log')
 ->where(['id'=>1])
 ->update([
@@ -271,7 +272,7 @@ $db->table('log')
 ```
 ## 删除数据
 成功返回影响行数,条件为空时不删除任何数据,确实想删除全表请传 1=1
-```
+``` php
 $db->table('log')
     ->where(['id'=>1])
     ->delete();
@@ -292,7 +293,7 @@ $db->table('log')->delete(1);
 * count()
 * sum()
 ## 事务处理
-```
+``` php
 try {
   $db->beginTransaction(); // 开启一个事务
   $row = null;
@@ -317,7 +318,7 @@ try {
 * log() 取所有执行的日志(sql语句)
 * info()取服务器信息
 ## SQLite示例
-```
+``` php
 //创建一个表
 $db->exec('
 CREATE TABLE "kl_content" (
