@@ -263,7 +263,11 @@ class Mokuyu
 
     /**
      * 添加数据成功后返回添加成功的id
-     * @param [type] $datas [description]
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param array $datas [description]
      */
     public function add(array $datas)
     {
@@ -412,6 +416,15 @@ class Mokuyu
         return $this->summary('COUNT', [$field]);
     }
 
+    /**
+     * 调试查询,程序会中断
+     * @authname [name]       0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  bool|boolean $isdebug [description]
+     * @return [type]
+     */
     public function debug(bool $isdebug = true)
     {
         $this->debugMode = $isdebug;
@@ -449,6 +462,14 @@ class Mokuyu
 
     }
 
+    /**
+     * 返回所有整个错误数组
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return [type]
+     */
     public function error()
     {
         return $this->errors;
@@ -532,6 +553,15 @@ class Mokuyu
         return 0;
     }
 
+    /**
+     * 此次查询只返回sql语句
+     * @authname [name]       0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  bool|boolean $bo [description]
+     * @return [type]
+     */
     public function fetchSql(bool $bo = true)
     {
         $this->isFetchSql = $bo;
@@ -607,6 +637,15 @@ class Mokuyu
         return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
     }
 
+    /**
+     * 强制使用指定的索引字段
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  [type]   $field [description]
+     * @return [type]
+     */
     public function forceIndex($field)
     {
         $this->queryParams['forceIndex'] = $field;
@@ -734,11 +773,27 @@ class Mokuyu
         }
     }
 
+    /**
+     * 返回最后一次错误日志
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return [type]
+     */
     public function getLastError()
     {
         return end($this->errors);
     }
 
+    /**
+     * 返回最后一次执行过的sql
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return [type]
+     */
     public function getLastSql()
     {
         return end($this->logs);
@@ -760,6 +815,11 @@ class Mokuyu
 
     /**
      * 取当前数据库的主键
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return [type]
      */
     public function getPK()
     {
@@ -840,6 +900,14 @@ eot;
         }
     }
 
+    /**
+     * 返回请求的参数
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return [type]
+     */
     public function getQueryParams(): array
     {
         return $this->queryParams;
@@ -865,6 +933,15 @@ eot;
         return $redata;
     }
 
+    /**
+     * 查询分组
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  string   $data [description]
+     * @return [type]
+     */
     public function group(string $data)
     {
         $this->queryParams['group'] = $data;
@@ -872,6 +949,14 @@ eot;
         return $this;
     }
 
+    /**
+     * 是否有有记录
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return boolean
+     */
     public function has()
     {
         $this->queryParams['LIMIT'] = ' LIMIT 1';
@@ -889,6 +974,14 @@ eot;
         return $query->fetchColumn(0) == 1;
     }
 
+    /**
+     * 返回服务器信息
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @return [type]
+     */
     public function info()
     {
         $val = $this->cacheAction('db_version_info');
@@ -909,6 +1002,20 @@ eot;
         $this->cacheAction('db_version_info', $output);
 
         return $output;
+    }
+
+    /**
+     * add的别名
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  array    $datas [description]
+     * @return [type]
+     */
+    public function insert(array $datas)
+    {
+        return $this->add($datas);
     }
 
     /**
