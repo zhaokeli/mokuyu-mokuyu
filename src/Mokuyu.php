@@ -978,6 +978,21 @@ eot;
     }
 
     /**
+     * 分页
+     * @authname [name]     0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  string   $page     当前页数
+     * @param  integer  $pageSize 分页大小
+     * @return [type]
+     */
+    public function page(int $page = 1, int $pageSize = 15)
+    {
+        return $this->limit(($page - 1) * $pageSize, $pageSize);
+    }
+
+    /**
      * [query description]
      * @DateTime 2019-05-02
      * @Author   mokuyu
