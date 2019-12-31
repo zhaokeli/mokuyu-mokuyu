@@ -1,11 +1,58 @@
 # Mokuyu数据库操作
+<!-- MarkdownTOC -->
+
+- [composer 安装方法](#composer-%E5%AE%89%E8%A3%85%E6%96%B9%E6%B3%95)
+- [手动安装](#%E6%89%8B%E5%8A%A8%E5%AE%89%E8%A3%85)
+- [数据库规范](#%E6%95%B0%E6%8D%AE%E5%BA%93%E8%A7%84%E8%8C%83)
+- [特别注意](#%E7%89%B9%E5%88%AB%E6%B3%A8%E6%84%8F)
+- [功能亮点和要求](#%E5%8A%9F%E8%83%BD%E4%BA%AE%E7%82%B9%E5%92%8C%E8%A6%81%E6%B1%82)
+- [数据库缓存](#%E6%95%B0%E6%8D%AE%E5%BA%93%E7%BC%93%E5%AD%98)
+- [连接数据库](#%E8%BF%9E%E6%8E%A5%E6%95%B0%E6%8D%AE%E5%BA%93)
+  - [连接mysql](#%E8%BF%9E%E6%8E%A5mysql)
+  - [连接pgsql](#%E8%BF%9E%E6%8E%A5pgsql)
+  - [连接sqlite](#%E8%BF%9E%E6%8E%A5sqlite)
+- [连贯操作](#%E8%BF%9E%E8%B4%AF%E6%93%8D%E4%BD%9C)
+  - [getPK\(\)](#getpk)
+  - [fieldMap\(\)](#fieldmap)
+  - [fieldMode\(\)](#fieldmode)
+  - [tableMode\(\)](#tablemode)
+  - [forceIndex\(\)](#forceindex)
+  - [field\(\)](#field)
+  - [where\(\)](#where)
+  - [limit\(\)](#limit)
+  - [order\(\)](#order)
+  - [rand\(\)](#rand)
+  - [group\(\)](#group)
+  - [page\(page,pageSize\)](#pagepagepagesize)
+  - [join\(\)](#join)
+  - [select\(\)](#select)
+  - [get\(\)](#get)
+  - [has\(\)](#has)
+  - [paginate\(page,pageSize\)](#paginatepagepagesize)
+  - [getFields\(\)](#getfields)
+  - [getPDO\(bool $isWrite = false\): PDO](#getpdobool-%24iswrite--false-pdo)
+  - [getPK\(\)](#getpk-1)
+  - [getQueryParams](#getqueryparams)
+  - [getWhere\(array $data = \[\]\)](#getwherearray-%24data--)
+- [原生SQL](#%E5%8E%9F%E7%94%9Fsql)
+- [添加数据](#%E6%B7%BB%E5%8A%A0%E6%95%B0%E6%8D%AE)
+- [更新数据](#%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE)
+- [删除数据](#%E5%88%A0%E9%99%A4%E6%95%B0%E6%8D%AE)
+- [字段操作](#%E5%AD%97%E6%AE%B5%E6%93%8D%E4%BD%9C)
+- [汇总数据](#%E6%B1%87%E6%80%BB%E6%95%B0%E6%8D%AE)
+- [事务处理](#%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86)
+- [调试](#%E8%B0%83%E8%AF%95)
+- [SQLite示例](#sqlite%E7%A4%BA%E4%BE%8B)
+
+<!-- /MarkdownTOC -->
+
 ## composer 安装方法
 ``` bash
 # install mokuyu
 composer require mokuyu/mokuyu
 ```
 ## 手动安装
-本库可以缓存字段等信息，使用psr标准缓存接口 Psr\SimpleCache\CacheInterface; 请自己引入缓存标准接口文件  
+本库可以缓存字段等信息，使用psr标准缓存接口 Psr\SimpleCache\CacheInterface; 请自己引入缓存标准接口文件
 [Psr\SimpleCache\CacheInterface 下载地址](https://github.com/php-fig/simple-cache/tree/master/src)
 ``` php
 include __dir__.'/CacheInterface.php';
@@ -21,7 +68,7 @@ include __dir__.'/CacheInterface.php';
 
 >如果字段没有按下面的规范写,可以使用字段映射来一一对应，以上规范为强烈建议，非强制使用
 ## 特别注意
-* 数据表解析时会把非首位的大写字母解析成下划线加小写字母，如userGroup/UserGroup 都会被解析为 db_user_group 
+* 数据表解析时会把非首位的大写字母解析成下划线加小写字母，如userGroup/UserGroup 都会被解析为 db_user_group
 * 字段风格默认为不转换,0:默认字段，1:转换为下划线风格，2:转换为驼峰风格,查询时会按这些规则转换成真实的数据库字段进行查询
 
 
@@ -113,7 +160,7 @@ $db->table('user')
 ### fieldMode()
  * 字段风格,把传入的字段转为下面,也可以在查询时使用fieldMode()设置临时风格
  * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
- 
+
 ### tableMode()
  * 字段风格,把传入的字段转为下面,也可以在查询时使用fieldMode()设置临时风格
  * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
@@ -192,6 +239,8 @@ $map=[
 如果这个函数被调用则会覆盖上面的排序,会使用随机排序
 ### group()
 参数为字符串(username)
+### page(page,pageSize)
+返回指定页码和分页大小的记录数
 ### join()
 ```
 主表就是使用table设置的表
@@ -230,6 +279,33 @@ $map=[
 
 从数据库中查询数据存在不。返回true false
 
+###　paginate(page,pageSize)
+数据分页,第一个参数为当前页码，第二个为分页大小，返回结果为如下格式
+``` php
+return [
+    'list'     => $query->fetchAll(PDO::FETCH_ASSOC),
+    'count'    => $count,
+    'page'     => $page,
+    'pageSize' => $pageSize,
+];
+```
+### getFields()
+返回指定表中的字段
+
+### getPDO(bool $isWrite = false): PDO
+返回pdo对象
+
+### getPK()
+返回表中的主键
+
+### getQueryParams
+返回组装sql请求的参数数组
+
+### getWhere(array $data = [])
+返回生成的where条件，返回结果为
+``` php
+ [$this->queryParams['where'], $this->bindParam];
+```
 ## 原生SQL
 有返回值的使用query,
 ``` php
