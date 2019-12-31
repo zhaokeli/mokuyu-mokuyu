@@ -11,7 +11,7 @@
   - [连接mysql](#%E8%BF%9E%E6%8E%A5mysql)
   - [连接pgsql](#%E8%BF%9E%E6%8E%A5pgsql)
   - [连接sqlite](#%E8%BF%9E%E6%8E%A5sqlite)
-- [连贯操作](#%E8%BF%9E%E8%B4%AF%E6%93%8D%E4%BD%9C)
+- [查询条件设置](#%E6%9F%A5%E8%AF%A2%E6%9D%A1%E4%BB%B6%E8%AE%BE%E7%BD%AE)
   - [getPK\(\)](#getpk)
   - [fieldMap\(\)](#fieldmap)
   - [fieldMode\(\)](#fieldmode)
@@ -25,20 +25,22 @@
   - [group\(\)](#group)
   - [page\(page,pageSize\)](#pagepagepagesize)
   - [join\(\)](#join)
+- [返回查询/执行结果](#%E8%BF%94%E5%9B%9E%E6%9F%A5%E8%AF%A2%E6%89%A7%E8%A1%8C%E7%BB%93%E6%9E%9C)
   - [select\(\)](#select)
   - [get\(\)](#get)
   - [has\(\)](#has)
   - [paginate\(page,pageSize\)](#paginatepagepagesize)
   - [getFields\(\)](#getfields)
-  - [getPDO\(bool $isWrite = false\): PDO](#getpdobool-%24iswrite--false-pdo)
+  - [getPDO\(bool isWrite = false\): PDO](#getpdobool-iswrite--false-pdo)
   - [getPK\(\)](#getpk-1)
   - [getQueryParams](#getqueryparams)
-  - [getWhere\(array $data = \[\]\)](#getwherearray-%24data--)
+  - [getWhere\(array data = \[\]\)](#getwherearray-data--)
 - [原生SQL](#%E5%8E%9F%E7%94%9Fsql)
-- [添加数据](#%E6%B7%BB%E5%8A%A0%E6%95%B0%E6%8D%AE)
-- [更新数据](#%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE)
-- [删除数据](#%E5%88%A0%E9%99%A4%E6%95%B0%E6%8D%AE)
-- [字段操作](#%E5%AD%97%E6%AE%B5%E6%93%8D%E4%BD%9C)
+- [数据的增删除改](#%E6%95%B0%E6%8D%AE%E7%9A%84%E5%A2%9E%E5%88%A0%E9%99%A4%E6%94%B9)
+  - [添加数据](#%E6%B7%BB%E5%8A%A0%E6%95%B0%E6%8D%AE)
+  - [更新数据](#%E6%9B%B4%E6%96%B0%E6%95%B0%E6%8D%AE)
+  - [删除数据](#%E5%88%A0%E9%99%A4%E6%95%B0%E6%8D%AE)
+  - [字段操作](#%E5%AD%97%E6%AE%B5%E6%93%8D%E4%BD%9C)
 - [汇总数据](#%E6%B1%87%E6%80%BB%E6%95%B0%E6%8D%AE)
 - [事务处理](#%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86)
 - [调试](#%E8%B0%83%E8%AF%95)
@@ -136,7 +138,7 @@ $db = new \mokuyu\database\Mokuyu([
 ]);
 ```
 
-## 连贯操作
+## 查询条件设置
 >
 ``` php
 $db->table('user')
@@ -269,17 +271,17 @@ $map=[
     ],
     //LEFT JOIN `kl_visitor2` ON `kl_event_log`.`author_id` = `kl_visitor2`.`user_id` AND `kl_user`.`user_id` = `kl_visitor2`.`user_id`
 ```
+## 返回查询/执行结果
 ### select()
-
 从数据库取回指定数据返回一个多维数据
+
 ### get()
-
 从数据库中取回一条数据返回一维数组，如果只有一个字段就返回这个字段的值
-### has()
 
+### has()
 从数据库中查询数据存在不。返回true false
 
-###　paginate(page,pageSize)
+### paginate(page,pageSize)
 数据分页,第一个参数为当前页码，第二个为分页大小，返回结果为如下格式
 ``` php
 return [
@@ -292,7 +294,7 @@ return [
 ### getFields()
 返回指定表中的字段
 
-### getPDO(bool $isWrite = false): PDO
+### getPDO(bool isWrite = false): PDO
 返回pdo对象
 
 ### getPK()
@@ -301,7 +303,7 @@ return [
 ### getQueryParams
 返回组装sql请求的参数数组
 
-### getWhere(array $data = [])
+### getWhere(array data = [])
 返回生成的where条件，返回结果为
 ``` php
  [$this->queryParams['where'], $this->bindParam];
@@ -323,7 +325,8 @@ $db->exec("CREATE TABLE table (
 // 可以使用 getLastError() 获取最后一次执行后的错误提示
 
 ```
-## 添加数据
+## 数据的增删除改
+### 添加数据
 成功返回自增id值,添加时要使用sql中的函数可在字段前面加个‘#’就可以使用,批量添加可以用多维数组，会自动使用事务进行操作，(表引擎要使用InnoDB),批量添加返回值不会返回自增id这点要注意
 ``` php
 $db->table('log')->add([
@@ -332,7 +335,7 @@ $db->table('log')->add([
   ]);
 ```
 
-## 更新数据
+### 更新数据
 成功返回影响行数
 ``` php
 $db->table('log')
@@ -351,7 +354,7 @@ $db->table('log')
   'views[/]'=>2,
 ]);
 ```
-## 删除数据
+### 删除数据
 成功返回影响行数,条件为空时不删除任何数据,确实想删除全表请传 1=1
 ``` php
 $db->table('log')
@@ -360,7 +363,7 @@ $db->table('log')
 //使用主键删除
 $db->table('log')->delete(1);
 ```
-## 字段操作
+### 字段操作
 对指定字段进行运算更新
 
 * setInc('字段',数字) 加法运算
