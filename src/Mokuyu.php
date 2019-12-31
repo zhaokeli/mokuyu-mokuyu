@@ -1085,7 +1085,7 @@ eot;
     }
 
     /**
-     * 分页
+     * 返回指定分页的记录
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
@@ -1097,6 +1097,60 @@ eot;
     public function page(int $page = 1, int $pageSize = 15)
     {
         return $this->limit(($page - 1) * $pageSize, $pageSize);
+    }
+
+    /**
+     * 自动分页
+     * @authname [name]      0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  integer     $intpage                当前页
+     * @param  int|integer $pageSize               分页大小
+     * @return 返回      [list=>[],count=>100]
+     */
+    public function paginate(int $page = 1, int $pageSize = 15)
+    {
+        $temBak = [
+            'queryParams'  => $this->queryParams,
+            'bindParam'    => $this->bindParam,
+            'temFieldMode' => $this->temFieldMode,
+            'temTableMode' => $this->temTableMode,
+            'fieldMap'     => $this->fieldMap,
+        ];
+        //统计数量时只需要第一个有效字段做为统计字段
+        $temField = $this->queryParams['field'];
+        if (is_string($temField)) {
+            $temField = explode(',', $temField);
+        }
+        if (count($temField) > 1) {
+            $temField[0] === '*' && ($temField = [$temField[1]]);
+        }
+
+        $count = $this->field($temField[0])->count();
+
+        //还原原有查询条件
+        foreach ($temBak as $key => $value) {
+            $this->$key = $value;
+        }
+        $this->page($page, $pageSize);
+        $this->buildSqlConf();
+        if (empty($this->queryParams['table'])) {
+            return false;
+        }
+        $sql   = $this->buildSelect();
+        $query = $this->query($sql);
+        //调试时返回这些
+        if (!($query instanceof PDOStatement)) {
+            return $query ?: [];
+        }
+
+        return [
+            'list'     => $query->fetchAll(PDO::FETCH_ASSOC),
+            'count'    => $count,
+            'page'     => $page,
+            'pageSize' => $pageSize,
+        ];
     }
 
     /**
