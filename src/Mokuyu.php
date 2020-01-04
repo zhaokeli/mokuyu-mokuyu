@@ -124,6 +124,8 @@ class Mokuyu
         // PDO::ATTR_PERSISTENT        => true,
         //提取的时候将数值转换为字符串
         PDO::ATTR_STRINGIFY_FETCHES => false,
+        //查询出来字段小写
+        // PDO::ATTR_CASE              => PDO::CASE_NATURAL,
     ];
 
     /**
