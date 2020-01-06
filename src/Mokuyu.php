@@ -1185,7 +1185,13 @@ eot;
             if ($this->debugMode) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
-            $pdo   = $this->pdoRead ?: $this->pdoWrite;
+            $pdo = null;
+            if ($this->queryParams['useWriteConn'] === true) {
+                $pdo = $this->pdoWrite;
+            } else {
+                $pdo = $this->pdoRead ?: $this->pdoWrite;
+            }
+
             $t1    = microtime(true);
             $query = null;
             if ($hasParam) {
@@ -1412,6 +1418,21 @@ eot;
         }
 
         return $this->exec('UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $this->queryParams['where']);
+    }
+
+    /**
+     * 强制使用写pdo在一些强一至性的场景可以使用
+     * @authname [name]     0
+     * @DateTime 2020-01-06
+     * @Author   mokuyu
+     *
+     * @return [type]
+     */
+    public function useWriteConn()
+    {
+        $this->queryParams['useWriteConn'] = true;
+
+        return $this;
     }
 
     public function where($data)
@@ -1953,18 +1974,20 @@ eot;
         $this->temTableMode = $this->tableMode;
         $this->fieldMap     = [];
         $this->queryParams  = [
-            'table'      => '',
-            'srcTable'   => '', //传入的原始表
-            'join'       => [],
-            'where'      => [],
-            'order'      => '',
-            'rand'       => false,
-            'group'      => '',
-            'limit'      => '',
-            'field'      => '*',
-            'data'       => '',
+            'table'        => '',
+            'srcTable'     => '', //传入的原始表
+            'join'         => [],
+            'where'        => [],
+            'order'        => '',
+            'rand'         => false,
+            'group'        => '',
+            'limit'        => '',
+            'field'        => '*',
+            'data'         => '',
             //强制使用索引,mysql查询的时候用
-            'forceIndex' => '',
+            'forceIndex'   => '',
+            //强制使用写库来读数据,在一些强一至性的场景下会使用
+            'useWriteConn' => false,
         ];
         $this->bindParam = [];
     }
