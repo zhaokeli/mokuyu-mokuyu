@@ -49,6 +49,7 @@
     - [getWhere(array data = []):array](#getwherearray-data--array)
     - [getFields():array](#getfieldsarray)
   - [执行原生SQL](#%e6%89%a7%e8%a1%8c%e5%8e%9f%e7%94%9fsql)
+    - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
     - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
   - [数据的增删改](#%e6%95%b0%e6%8d%ae%e7%9a%84%e5%a2%9e%e5%88%a0%e6%94%b9)
     - [添加数据](#%e6%b7%bb%e5%8a%a0%e6%95%b0%e6%8d%ae)
@@ -59,6 +60,8 @@
     - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
     - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
   - [事务处理](#%e4%ba%8b%e5%8a%a1%e5%a4%84%e7%90%86)
+    - [beginTransaction()](#begintransaction)
+    - [transaction(Closure callback)](#transactionclosure-callback)
   - [调试](#%e8%b0%83%e8%af%95)
     - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
     - [debug(bool isdebug=true)](#debugbool-isdebugtrue)
@@ -365,7 +368,7 @@ return [
 ```
 
 ## 执行原生SQL
-###　query(string sql,array params=[]):array
+### query(string sql,array params=[]):array
 查询记录集可以使用query,如果参数不为空则会覆盖where条件中绑定的参数
 ``` php
 //执行sql后，会自动返回所有数据
@@ -432,6 +435,8 @@ $db->table('log')->delete(1);
 [字段],[数字],['+,-,*,/']
 
 ## 事务处理
+### beginTransaction()
+开启事务，这种方法需要手动提交和回滚
 ``` php
 try {
   $db->beginTransaction(); // 开启一个事务
@@ -448,6 +453,17 @@ try {
   $db->rollback(); // 执行失败，事务回滚
   exit($e->getMessage());
 }
+```
+### transaction(Closure callback)
+使用一个回调函数来执行事务,如果抛出异常则自动回滚操作，否则自动提交修改
+``` php
+$db->transaction(function()use($data){
+  //执行一些操作
+  //.......
+
+  //出现错误跑出异常回滚
+  throw new PDOException('add data error ', 1);
+});
 ```
 ## 调试
 ### fetchSql(bool bo=true)

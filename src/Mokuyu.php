@@ -11,6 +11,7 @@
 declare (strict_types = 1);
 namespace mokuyu\database;
 
+use Closure;
 use Exception;
 use InvalidArgumentException;
 use PDO;
@@ -275,37 +276,6 @@ class Mokuyu
     {
 
         return $this->insert($datas);
-    }
-
-    /**
-     * 这个地方传引用进来,防止key出现一样的情况导致冲突,如果一样的话在这个函数里会随机加上一个数字并修改这个key值
-     * @DateTime 2019-03-10
-     * @Author   mokuyu
-     *
-     * @param  [type]   &$key  引用类型键
-     * @param  [type]   $value 值
-     * @param  [type]   $index 多维数据索引,默认为一维数据
-     * @return [type]
-     */
-    public function appendBindParam(&$key, $value, $index = null): void
-    {
-        $key = ':' . trim($key, ':');
-        $tem = $key;
-        while (true) {
-            //没有绑定过这个参数直接绑定并跳出
-            if (!isset($this->bindParam[$tem])) {
-                $key = $tem;
-                break;
-            }
-            //绑定过的key，加上随机数，然后再循环一次判断绑定
-            $tem = $key . '_' . rand(1000, 9999);
-        }
-        if (is_null($index)) {
-            $this->bindParam[$key] = $value;
-        } else {
-            $this->bindParam[$index][$key] = $value;
-        }
-
     }
 
     public function avg(...$field)
@@ -1358,7 +1328,7 @@ eot;
      * @param  \Closure $callback [description]
      * @return [type]
      */
-    public function transaction(\Closure $callback)
+    public function transaction(Closure $callback)
     {
         $this->pdoWrite->beginTransaction();
         // We'll simply execute the given callback within a try / catch block
@@ -1368,6 +1338,9 @@ eot;
             $result = $callback($this);
 
             $this->pdoWrite->commit();
+        } catch (PDOException $e) {
+            $this->pdoWrite->rollBack();
+            throw $e;
         }
 
         // If we catch an exception, we will roll back so nothing gets messed
@@ -1508,6 +1481,37 @@ eot;
         }
 
         return $this;
+    }
+
+    /**
+     * 这个地方传引用进来,防止key出现一样的情况导致冲突,如果一样的话在这个函数里会随机加上一个数字并修改这个key值
+     * @DateTime 2019-03-10
+     * @Author   mokuyu
+     *
+     * @param  [type]   &$key  引用类型键
+     * @param  [type]   $value 值
+     * @param  [type]   $index 多维数据索引,默认为一维数据
+     * @return [type]
+     */
+    protected function appendBindParam(&$key, $value, $index = null): void
+    {
+        $key = ':' . trim($key, ':');
+        $tem = $key;
+        while (true) {
+            //没有绑定过这个参数直接绑定并跳出
+            if (!isset($this->bindParam[$tem])) {
+                $key = $tem;
+                break;
+            }
+            //绑定过的key，加上随机数，然后再循环一次判断绑定
+            $tem = $key . '_' . rand(1000, 9999);
+        }
+        if (is_null($index)) {
+            $this->bindParam[$key] = $value;
+        } else {
+            $this->bindParam[$index][$key] = $value;
+        }
+
     }
 
     protected function appendSqlLogs(float $rtime, string $sql, array $params): void
