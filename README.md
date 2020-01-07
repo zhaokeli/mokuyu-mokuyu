@@ -1,5 +1,5 @@
 # Mokuyu数据库操作
-<!-- MarkdownTOC -->
+<!-- TOC -->
 
 - [Mokuyu数据库操作](#mokuyu%e6%95%b0%e6%8d%ae%e5%ba%93%e6%93%8d%e4%bd%9c)
   - [安装方法](#%e5%ae%89%e8%a3%85%e6%96%b9%e6%b3%95)
@@ -14,54 +14,61 @@
     - [连接pgsql](#%e8%bf%9e%e6%8e%a5pgsql)
     - [连接sqlite](#%e8%bf%9e%e6%8e%a5sqlite)
   - [查询条件连贯操作](#%e6%9f%a5%e8%af%a2%e6%9d%a1%e4%bb%b6%e8%bf%9e%e8%b4%af%e6%93%8d%e4%bd%9c)
-    - [fieldMap()](#fieldmap)
-    - [fieldMode()](#fieldmode)
-    - [tableMode()](#tablemode)
-    - [forceIndex()](#forceindex)
+    - [fieldMap(array map)](#fieldmaparray-map)
+    - [fieldMode(int type=0)](#fieldmodeint-type0)
+    - [tableMode(int type=0)](#tablemodeint-type0)
+    - [forceIndex(string field)](#forceindexstring-field)
     - [useWriteConn()](#usewriteconn)
-    - [field()](#field)
-    - [where()](#where)
-    - [limit()](#limit)
-    - [order()](#order)
+    - [field(string/array fields)](#fieldstringarray-fields)
+    - [where(string/array)](#wherestringarray)
+    - [whereOr(string/array)](#whereorstringarray)
+    - [limit(start,end=null)](#limitstartendnull)
+    - [order(string/array)](#orderstringarray)
     - [rand()](#rand)
-    - [group()](#group)
-    - [page(page,pageSize)](#pagepagepagesize)
-    - [join()](#join)
+    - [group(string data)](#groupstring-data)
+    - [page(int page=1,int pageSize=15)](#pageint-page1int-pagesize15)
+    - [join(array data)](#joinarray-data)
   - [执行查询并返回结果](#%e6%89%a7%e8%a1%8c%e6%9f%a5%e8%af%a2%e5%b9%b6%e8%bf%94%e5%9b%9e%e7%bb%93%e6%9e%9c)
-    - [select()](#select)
-    - [get()](#get)
-    - [has()](#has)
-    - [paginate(page,pageSize)](#paginatepagepagesize)
-    - [min(...field)](#minfield)
-    - [max(...field)](#maxfield)
-    - [avg(...field)](#avgfield)
-    - [count(field)](#countfield)
-    - [sum(...field)](#sumfield)
+    - [select():array](#selectarray)
+    - [insert(array datas):int](#insertarray-datasint)
+    - [update(array datas):int](#updatearray-datasint)
+    - [delete(int id=0):int](#deleteint-id0int)
+    - [save(array datas):int](#savearray-datasint)
+    - [get([int id = 0]):array/string](#getint-id--0arraystring)
+    - [has():boolean](#hasboolean)
+    - [paginate(int page=1,int pageSize=15):array](#paginateint-page1int-pagesize15array)
+    - [min(...string field):int/array](#minstring-fieldintarray)
+    - [max(...string field):int/array](#maxstring-fieldintarray)
+    - [avg(...string field):int/array](#avgstring-fieldintarray)
+    - [sum(...string field):int/array](#sumstring-fieldintarray)
+    - [count(string field):int](#countstring-fieldint)
   - [其它信息获取](#%e5%85%b6%e5%ae%83%e4%bf%a1%e6%81%af%e8%8e%b7%e5%8f%96)
-    - [getPK()](#getpk)
+    - [getPK():string](#getpkstring)
     - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
-    - [getQueryParams](#getqueryparams)
-    - [getWhere(array data = [])](#getwherearray-data)
-    - [getFields()](#getfields)
+    - [getQueryParams():array](#getqueryparamsarray)
+    - [getWhere(array data = []):array](#getwherearray-data--array)
+    - [getFields():array](#getfieldsarray)
   - [执行原生SQL](#%e6%89%a7%e8%a1%8c%e5%8e%9f%e7%94%9fsql)
+    - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
   - [数据的增删改](#%e6%95%b0%e6%8d%ae%e7%9a%84%e5%a2%9e%e5%88%a0%e6%94%b9)
     - [添加数据](#%e6%b7%bb%e5%8a%a0%e6%95%b0%e6%8d%ae)
     - [更新数据](#%e6%9b%b4%e6%96%b0%e6%95%b0%e6%8d%ae)
     - [删除数据](#%e5%88%a0%e9%99%a4%e6%95%b0%e6%8d%ae)
   - [字段操作](#%e5%ad%97%e6%ae%b5%e6%93%8d%e4%bd%9c)
-    - [setInc(fiela,num)](#setincfielanum)
-    - [setDec(field,num)](#setdecfieldnum)
-    - [fieldOperation(par,par,par)](#fieldoperationparparpar)
+    - [setInc(string fiela,int num=1):int](#setincstring-fielaint-num1int)
+    - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
+    - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
   - [事务处理](#%e4%ba%8b%e5%8a%a1%e5%a4%84%e7%90%86)
   - [调试](#%e8%b0%83%e8%af%95)
-    - [fetchSql(bool)](#fetchsqlbool)
-    - [debug(bool)](#debugbool)
-    - [getLastSql()](#getlastsql)
-    - [getLastError()](#getlasterror)
-    - [log()](#log)
-    - [info()](#info)
+    - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
+    - [debug(bool isdebug=true)](#debugbool-isdebugtrue)
+    - [getLastSql():string](#getlastsqlstring)
+    - [getLastError():string](#getlasterrorstring)
+    - [log():array](#logarray)
+    - [info():array](#infoarray)
   - [SQLite示例](#sqlite%e7%a4%ba%e4%be%8b)
 
+<!-- /TOC -->
 <!-- /MarkdownTOC -->
 ## 安装方法
 ### composer
@@ -166,7 +173,7 @@ $db->table('user')
     ->select()
 ```
 
-### fieldMap()
+### fieldMap(array map)
 字段映射
 设置查询字段和数据库真实字段的映射
 ```
@@ -175,21 +182,21 @@ $db->table('user')
   // 'push_time' => 'create_time',
 ]
 ```
-### fieldMode()
+### fieldMode(int type=0)
  * 字段风格,把传入的字段转为下面,也可以在查询时使用fieldMode()设置临时风格
  * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
 
-### tableMode()
+### tableMode(int type=0)
  * 字段风格,把传入的字段转为下面,也可以在查询时使用fieldMode()设置临时风格
  * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
 
-### forceIndex()
+### forceIndex(string field)
 强制使用索引,目前Mysql sqlite oracle中可用，其它数据库没有测试,目前只支持主表，join的表不支持，如需要使用请使用原生sql查询
 
 ### useWriteConn()
 强制使用写库连接来进行操作,在一些强一至性的读写分离项目中可以使用。
 
-### field()
+### field(string/array fields)
 字段可以直接使用原生格式，不用加反引号,会自动识别并添加上
 
 ``` php
@@ -206,8 +213,8 @@ $field=[
 ```
 $field='distinct(username),password,nickname[name]';
 ```
-### where()
-其中的and和or键可以任意嵌套，顶层默认为and连接
+### where(string/array)
+如果是字符串的话请使用原生sql,包括数据表请用带前缀的表名，数组时其中的and和or键可以任意嵌套，顶层默认为and连接
 ``` php
 $map=[
   'and'=>[
@@ -251,20 +258,26 @@ $map=[
   'field'=>['neq',100],
 ];
 ```
+### whereOr(string/array)
+where or连接的另一种添加方式
 
-### limit()
+### limit(start,end=null)
 参数为(1,10)或(10)[0,10]
-### order()
+
+### order(string/array)
 参数为字符串(user_id desc,username desc)也可以为数组
 如果多表联合查询的时候有相同字段那么可以直接使用表名,如wechat.update_time最终解析为kl_wechat.update
+
 ### rand()
 没有参数
 如果这个函数被调用则会覆盖上面的排序,会使用随机排序
-### group()
+
+### group(string data)
 参数为字符串(username)
-### page(page,pageSize)
+
+### page(int page=1,int pageSize=15)
 返回指定页码和分页大小的记录数
-### join()
+### join(array data)
 ```
 主表就是使用table设置的表
 // [>] == LEFT JOIN
@@ -294,16 +307,28 @@ $map=[
 ```
 ## 执行查询并返回结果
 
-### select()
+### select():array
 从数据库取回指定数据返回一个多维数据
 
-### get()
+### insert(array datas):int
+别名 **add()** ,添加数据
+
+### update(array datas):int
+更新数据
+
+### delete(int id=0):int
+删除数据，必须有条件的情况下才能删除，没有条件的情况下请传入 1=1
+
+### save(array datas):int
+自动判断添加还是更新，首先判断如果有where条件，则会执行更新操作，没有where条件如果数据里有主键则执行更新操作,否则将插入数据，
+
+### get([int id = 0]):array/string
 从数据库中取回一条数据返回一维数组，如果只有一个字段就返回这个字段的值
 
-### has()
+### has():boolean
 从数据库中查询数据存在不。返回true false
 
-### paginate(page,pageSize)
+### paginate(int page=1,int pageSize=15):array
 数据分页,第一个参数为当前页码，第二个为分页大小，返回结果为如下格式
 ``` php
 return [
@@ -313,40 +338,42 @@ return [
     'pageSize' => $pageSize,
 ];
 ```
-### min(...field)
-### max(...field)
-### avg(...field)
-### count(field)
-### sum(...field)
+### min(...string field):int/array
+### max(...string field):int/array
+### avg(...string field):int/array
+### sum(...string field):int/array
+### count(string field):int
 
 ## 其它信息获取
 
-### getPK()
-返回表中的主键
+### getPK():string
+返回表中的主键,调用前一定要先调用table设置表
 
 ### getPDO(bool isWrite = false): PDO
 返回pdo对象
 
-### getQueryParams
+### getQueryParams():array
 返回组装sql请求的参数数组
 
-### getWhere(array data = [])
+### getWhere(array data = []):array
 返回生成的where条件，返回结果为
 
-### getFields()
+### getFields():array
 返回指定表中的字段
 ``` php
  [$this->queryParams['where'], $this->bindParam];
 ```
 
 ## 执行原生SQL
-有返回值的使用query,
+###　query(string sql,array params=[]):array
+查询记录集可以使用query,如果参数不为空则会覆盖where条件中绑定的参数
 ``` php
 //执行sql后，会自动返回所有数据
 $sql='select * from kl_event_log';
 $db->query($sql);
 ```
-如果是一些更新插入操作,没有返回值使用exec
+### exec(string sql,array params=[]):int
+如果是一些更新插入操作使用exec，如果参数不为空则会覆盖where条件中绑定的参数
 ``` php
 $db->exec("CREATE TABLE table (
   c1 INT STORAGE DISK,
@@ -397,11 +424,11 @@ $db->table('log')->delete(1);
 ## 字段操作
 对指定字段进行运算更新
 
-### setInc(fiela,num)
+### setInc(string fiela,int num=1):int
 加法运算
-### setDec(field,num)
+### setDec(string field,int num=1):int
 减法运算
-### fieldOperation(par,par,par)
+### fieldOperation(string field,int num=0,string operation='+'):int
 [字段],[数字],['+,-,*,/']
 
 ## 事务处理
@@ -423,17 +450,17 @@ try {
 }
 ```
 ## 调试
-### fetchSql(bool)
-默认为true,返回值 为当前执行的sql语句
-### debug(bool)
-默认为true，会直接中断
-### getLastSql()
+### fetchSql(bool bo=true)
+默认为true,结果集为当前执行的sql语句
+### debug(bool isdebug=true)
+默认为true，查询结果会直接中断，并输出sql语句
+### getLastSql():string
 取最后一次执行的sql语句
-### getLastError()
+### getLastError():string
 取最后一次执行的报错
-### log()
+### log():array
 取所有执行的日志(sql语句)
-### info()
+### info():array
 取服务器信息
 ## SQLite示例
 ``` php

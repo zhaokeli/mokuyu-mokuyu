@@ -274,68 +274,7 @@ class Mokuyu
     public function add(array $datas)
     {
 
-        $this->buildSqlConf();
-        $table = $this->queryParams['table'];
-        if (empty($table)) {
-            return 0;
-        }
-        $pk     = $this->getPK();
-        $lastId = [];
-
-        if (count($datas) == count($datas, 1)) {
-            $datas = [$datas];
-        }
-        $isMulData = count($datas) > 1 ? true : false;
-        //取表的所有字段
-        $table_fields = (array) $this->getFields();
-        $index        = $isMulData ? 0 : null;
-        $sql          = '';
-        foreach ($datas as $data) {
-            $values  = [];
-            $columns = [];
-            foreach ((array) $data as $key => $value) {
-                $field = lcfirst($key);
-                $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
-                if (!in_array($field, $table_fields) || $field == $pk) {
-                    //过滤掉数据库中没有的字段,和主键
-                    continue;
-                }
-                $info      = $this->parseFormatField($key);
-                $column    = $this->yinhao . $info['field'] . $this->yinhao;
-                $columns[] = $column;
-                $col       = ':' . $info['field'];
-                $values[]  = $col;
-
-                if (is_null($value)) {
-                    $this->appendBindParam($col, 'NULL', $index);
-                } else if (is_object($value) || is_array($value)) {
-                    $this->appendBindParam($col, json_encode($value), $index);
-                } else if (is_bool($value)) {
-                    $this->appendBindParam($col, ($value ? '1' : '0'), $index);
-                } else if (is_integer($value) || is_double($value) || is_string($value)) {
-                    $this->appendBindParam($col, $value, $index);
-                } else {
-                    $this->appendBindParam($col, $value, $index);
-                }
-            }
-            if ($index === 0 || is_null($index)) {
-                $cols = implode(',', $columns);
-                $vals = implode(',', $values);
-                if (!$cols || !$vals) {
-                    return 0;
-                }
-                $sql = 'INSERT INTO ' . $table . ' (' . $cols . ') VALUES (' . $vals . ')';
-            }
-            $isMulData && $index++;
-
-        }
-        $result = $this->exec($sql);
-        if (is_string($result)) {
-            return $result;
-        }
-        // $lastId = ;
-
-        return $this->pdoWrite->lastInsertId() ?: $result;
+        return $this->insert($datas);
     }
 
     /**
@@ -413,7 +352,7 @@ class Mokuyu
         $this->pdoWrite->commit();
     }
 
-    public function count($field = '*')
+    public function count(string $field = '*')
     {
         return $this->summary('COUNT', [$field]);
     }
@@ -648,7 +587,7 @@ class Mokuyu
      * @param  [type]   $field [description]
      * @return [type]
      */
-    public function forceIndex($field)
+    public function forceIndex(string $field)
     {
         $this->queryParams['forceIndex'] = $field;
 
@@ -716,7 +655,7 @@ class Mokuyu
      *
      * @return [type]
      */
-    public function getFields()
+    public function getFields(): array
     {
         try {
             if (empty($this->queryParams['table'])) {
@@ -923,7 +862,7 @@ eot;
      * @param  [type]   $data [description]
      * @return [type]
      */
-    public function getWhere(array $data = [])
+    public function getWhere(array $data = []): array
     {
         if ($data) {
             $this->queryParams['where'] = $data;
@@ -1017,7 +956,68 @@ eot;
      */
     public function insert(array $datas)
     {
-        return $this->add($datas);
+        $this->buildSqlConf();
+        $table = $this->queryParams['table'];
+        if (empty($table)) {
+            return 0;
+        }
+        $pk     = $this->getPK();
+        $lastId = [];
+
+        if (count($datas) == count($datas, 1)) {
+            $datas = [$datas];
+        }
+        $isMulData = count($datas) > 1 ? true : false;
+        //取表的所有字段
+        $table_fields = (array) $this->getFields();
+        $index        = $isMulData ? 0 : null;
+        $sql          = '';
+        foreach ($datas as $data) {
+            $values  = [];
+            $columns = [];
+            foreach ((array) $data as $key => $value) {
+                $field = lcfirst($key);
+                $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
+                if (!in_array($field, $table_fields) || $field == $pk) {
+                    //过滤掉数据库中没有的字段,和主键
+                    continue;
+                }
+                $info      = $this->parseFormatField($key);
+                $column    = $this->yinhao . $info['field'] . $this->yinhao;
+                $columns[] = $column;
+                $col       = ':' . $info['field'];
+                $values[]  = $col;
+
+                if (is_null($value)) {
+                    $this->appendBindParam($col, 'NULL', $index);
+                } else if (is_object($value) || is_array($value)) {
+                    $this->appendBindParam($col, json_encode($value), $index);
+                } else if (is_bool($value)) {
+                    $this->appendBindParam($col, ($value ? '1' : '0'), $index);
+                } else if (is_integer($value) || is_double($value) || is_string($value)) {
+                    $this->appendBindParam($col, $value, $index);
+                } else {
+                    $this->appendBindParam($col, $value, $index);
+                }
+            }
+            if ($index === 0 || is_null($index)) {
+                $cols = implode(',', $columns);
+                $vals = implode(',', $values);
+                if (!$cols || !$vals) {
+                    return 0;
+                }
+                $sql = 'INSERT INTO ' . $table . ' (' . $cols . ') VALUES (' . $vals . ')';
+            }
+            $isMulData && $index++;
+
+        }
+        $result = $this->exec($sql);
+        if (is_string($result)) {
+            return $result;
+        }
+        // $lastId = ;
+
+        return $this->pdoWrite->lastInsertId() ?: $result;
     }
 
     /**
@@ -1245,6 +1245,35 @@ eot;
     }
 
     /**
+     * 如果数据里有主键则执行更新操作,否则将插入数据
+     * @authname [name]     0
+     * @DateTime 2020-01-07
+     * @Author   mokuyu
+     *
+     * @param  [type]   $datas [description]
+     * @return [type]
+     */
+    public function save($datas)
+    {
+        if (empty($this->queryParams['table'])) {
+            return 0;
+        }
+        if (empty($this->queryParams['where'])) {
+            $pk = $this->getPK();
+            if ($pk && isset($datas[$pk])) {
+                $map = [$pk => $datas[$pk]];
+                unset($datas[$pk]);
+
+                return $this->where($map)->update($datas);
+            } else {
+                return $this->update($datas);
+            }
+        } else {
+            return $this->update($datas);
+        }
+    }
+
+    /**
      * 查询数据返回一个二维数组
      * @return [type] [description]
      */
@@ -1352,6 +1381,15 @@ eot;
         return $result;
     }
 
+    /**
+     * 更新数据
+     * @authname [name]     0
+     * @DateTime 2020-01-07
+     * @Author   mokuyu
+     *
+     * @param  array    $data [description]
+     * @return [type]
+     */
     public function update(array $data)
     {
 
