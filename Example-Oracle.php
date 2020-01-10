@@ -113,7 +113,7 @@ var_dump($value1);
 // echo "quick delete article_id=51:{$result}\n";
 // //查询数据
 $list = $query->table('event_log')
-              ->debug(false)
+              ->abort(false)
               ->fetchSql()
               ->field([
                   'distinct(visitor . visitor_uuid)',
@@ -168,19 +168,19 @@ var_dump($list) . "\r\n";
 
 //更新数据
 $res = $query->table('visitor')
-             ->debug(false)
+             ->abort(false)
              ->fetchSql()
              ->where(['visitor_id' => $result])
              ->update(['visitor_uuid' => 9999888889]);
 var_dump($res);
 $res = $query->table('event_log')
-             ->debug(false)
+             ->abort(false)
              ->fetchSql()
              ->count();
 var_dump($res);
 
 $res = $query->table('event_log')
-             ->debug(false)
+             ->abort(false)
              ->fetchSql()
              ->where([
                  'event_log_id' => 1000,
@@ -189,7 +189,7 @@ $res = $query->table('event_log')
 var_dump($res);
 
 $res = $query->table('event_log')
-             ->debug(false)
+             ->abort(false)
              ->fetchSql()
              ->where([
                  'event_log_id' => 1000,
@@ -199,7 +199,7 @@ $res = $query->table('event_log')
 var_dump($res);
 
 $res = $query->table('event_log')
-             ->debug(false)
+             ->abort(false)
              ->fetchSql()
              ->where([
                  'event_log_id' => 1000,
