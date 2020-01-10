@@ -67,7 +67,7 @@ $query = new \mokuyu\database\Mokuyu([
 $datanum = 100;
 while (--$datanum > 0) {
 
-    $result = $query->debug(false)->table('article')->add([
+    $result = $query->abort(false)->table('article')->add([
         'title' => 'this is php data!' . rand(100, 1000),
         'views' => rand(100, 1000),
     ]);
@@ -83,7 +83,7 @@ $result = $query->table('article')->delete();
 echo "Delete result:{$result}\n";
 $result = $query->table('article')->where(['article_id[>]' => 51])->delete();
 echo "Delete article_id > 51 result:{$result}\n";
-$result = $query->table('article')->debug(false)->delete(51);
+$result = $query->table('article')->abort(false)->delete(51);
 echo "quick delete article_id=51:{$result}\n";
 // //查询数据
 $list = $query->table('event_log')

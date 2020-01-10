@@ -83,7 +83,7 @@ while (--$datanum > 0) {
         'update_time' => time(),
     ];
     //添加单个
-    // $result = $query->debug(false)->table('article')->add([
+    // $result = $query->abort(false)->table('article')->add([
     //     'title' => 'thisisphpdata!' . rand(100, 1000),
     //     'views' => rand(100, 1000),
     // ]);
@@ -91,7 +91,7 @@ while (--$datanum > 0) {
     // die();
     // echo $result . "\n";
 }
-$result = $query->debug(false)->table('article')->add($datas);
+$result = $query->abort(false)->table('article')->add($datas);
 // echo $result;
 // die();
 //测试平均数
@@ -109,7 +109,7 @@ var_dump($value1);
 // echo "Delete result:{$result}\n";
 // $result = $query->table('article')->where(['article_id[ > ]' => 51])->delete();
 // echo "Delete article_id > 51 result:{$result}\n";
-// $result = $query->table('article')->debug(false)->delete(51);
+// $result = $query->table('article')->abort(false)->delete(51);
 // echo "quick delete article_id=51:{$result}\n";
 // //查询数据
 $list = $query->table('event_log')

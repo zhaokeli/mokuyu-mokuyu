@@ -28,16 +28,16 @@ $data = [
     'create_time' => time(),
     'update_time' => time(),
 ];
-$result = $db->table('article')->debug(false)->add($data);
+$result = $db->table('article')->abort(false)->add($data);
 echo $result . "\r\n";
-$result = $db->table('article')->debug(false)->add($data);
+$result = $db->table('article')->abort(false)->add($data);
 echo $result . "\r\n";
-$result = $db->table('article')->debug(false)->add($data);
+$result = $db->table('article')->abort(false)->add($data);
 echo $result . "\r\n";
 $list = $db->table('article')->fetchSql()->select();
 var_dump($list);
 $result = $db->table('article')->fetchSql()->where(['article_id' => 1])->update(['title' => 'updateusername']);
 var_dump($result);
-$result = $db->table('article')->fetchSql()->debug(false)->delete(2);
+$result = $db->table('article')->fetchSql()->abort(false)->delete(2);
 var_dump($result);
 echo $db->table('article')->getPk();

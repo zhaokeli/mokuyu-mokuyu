@@ -613,7 +613,7 @@ CREATE TABLE "kl_content" (
 "create_time"  INTEGER NOT NULL DEFAULT 0
 );
 ');
-$result = $db->table('content')->debug(false)->add([
+$result = $db->table('content')->abort(false)->add([
   'username'    => 'testusername',
   'pwd'         => 'adminpwd',
   'create_time' => time(),
