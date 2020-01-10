@@ -60,16 +60,16 @@ $query = new \mokuyu\database\Mokuyu([
 // $model = new \ank\database\Model();
 // $query = new \ank\database\Query($conn);
 // var_dump($query);
-$query->table('article')->add([
+$result = $query->table('article')->add([
     'title'       => 'title',
-    'descr'       => 'descr',
+    // 'descript'    => 'descr',
     'create_time' => time(),
     'update_time' => time(),
 ]);
+echo $result . PHP_EOL;
 $list = $query->table('article')->select();
-
 // $list = $query->table('LOGSTDBY$SKIP_SUPPORT')->select();
-var_dump($list);
+// var_dump($list);
 die();
 //添加数据
 $datanum = 100;

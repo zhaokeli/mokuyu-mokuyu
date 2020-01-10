@@ -675,6 +675,21 @@ class Mokuyu
                         }
 
                     }
+                case 'oracle':
+                    $sql = 'SELECT table_name, column_name, data_type FROM all_tab_cols WHERE table_name = \'' . $table_name . '\'';
+                    $ckey .= md5($sql);
+                    $fieldArr = $this->cacheAction($ckey);
+                    if ($fieldArr === null) {
+                        $info = $this->pdoRead->query($sql);
+                        if ($info) {
+                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($info as $key => $value) {
+                                $fieldArr[] = $value['COLUMN_NAME'];
+                            }
+                        }
+
+                    }
+
             }
             $fieldArr = $fieldArr ?: [];
             $this->cacheAction($ckey, $fieldArr);
@@ -804,6 +819,48 @@ class Mokuyu
 
                     }
                     break;
+                case 'oracle':
+                    // $sql = 'select * from user_cons_columns where constraint_name=(select constraint_name from user_constraints where table_name = UPPER(\'' . $table_name . '\') and constraint_type =\'P\')';
+                    //$sql = 'select cu.* from user_cons_columns cu, user_constraints au where cu.constraint_name = au.constraint_name and au.constraint_type = \'P\' and au.table_name = UPPER(\'' . $table_name . '\')';
+                    // $info = $this->pdoRead->query($sql);
+                    // $sql = implode("\r\n", $sql);
+                    $sql = [
+                        'SELECT',
+                        '   C.CONSTRAINT_NAME,',
+                        '   CC.COLUMN_NAME,',
+                        '   CC.POSITION,',
+                        '   C.OWNER,',
+                        '   C.TABLE_NAME ',
+                        'FROM',
+                        '   ALL_CONSTRAINTS C,',
+                        '   ALL_CONS_COLUMNS CC ',
+                        'WHERE',
+                        '   C.OWNER = CC.OWNER ',
+                        '   AND C.CONSTRAINT_TYPE = \'P\' ',
+                        '   AND C.CONSTRAINT_NAME = CC.CONSTRAINT_NAME ',
+                        '   AND C.TABLE_NAME = CC.TABLE_NAME ',
+                        '   AND C.TABLE_NAME = \'' . $table_name . '\' ',
+                        'ORDER BY',
+                        '   4,',
+                        '   1,',
+                        '   3',
+                    ];
+                    $sql = implode("\r\n", $sql);
+                    $ckey .= md5($sql);
+                    $primaryName = $this->cacheAction($ckey);
+                    //已经查询过并且没有主键的情况直接返回
+                    if ($primaryName === null) {
+                        $info = $this->pdoRead->query($sql);
+                        if ($info) {
+                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($info as $key => $value) {
+                                $primaryName = $value['COLUMN_NAME'];
+
+                                break;
+                            }
+                        }
+
+                    }
             }
             $primaryName = $primaryName ?: '';
             $this->cacheAction($ckey, $primaryName);
@@ -911,8 +968,13 @@ class Mokuyu
         ];
 
         foreach ($output as $key => $value) {
-            $output[$key] = $this->pdoWrite->getAttribute(constant('PDO::ATTR_' . $value));
+            try {
+                $output[$key] = $this->pdoWrite->getAttribute(constant('PDO::ATTR_' . $value));
+            } catch (PDOException $e) {
+
+            }
         }
+
         $this->cacheAction('db_version_info', $output);
 
         return $output;
@@ -929,6 +991,7 @@ class Mokuyu
      */
     public function insert(array $datas)
     {
+        $srcTable = $this->queryParams['table'];
         $this->buildSqlConf();
         $table = $this->queryParams['table'];
         if (empty($table)) {
@@ -959,7 +1022,6 @@ class Mokuyu
                 $column    = $this->yinhao . $info['field'] . $this->yinhao;
                 $columns[] = $column;
                 $col       = ':' . $info['field'];
-                $values[]  = $col;
 
                 if (is_null($value)) {
                     $this->appendBindParam($col, 'NULL', $index);
@@ -972,6 +1034,7 @@ class Mokuyu
                 } else {
                     $this->appendBindParam($col, $value, $index);
                 }
+                $values[] = $col;
             }
             if ($index === 0 || is_null($index)) {
                 $cols = implode(',', $columns);
@@ -988,9 +1051,18 @@ class Mokuyu
         if (is_string($result)) {
             return $result;
         }
+        if ($this->databaseType === 'oracle') {
+            if ($pk && $result) {
+                $result = $this->table($srcTable)->field($pk)->order($pk . ' desc')->limit(1)->get();
+                $result = $result ?: 1;
+            }
+
+            return $result;
+        }
         // $lastId = ;
 
         return $this->pdoWrite->lastInsertId() ?: $result;
+
     }
 
     /**
@@ -1027,8 +1099,18 @@ class Mokuyu
                 $data = ' LIMIT ' . $end . ' OFFSET ' . $start;
                 break;
             case 'mssql':  //12c
-            case 'oracle': //2012 11g
-                $data = ' OFFSET ' . $start . ' ROWS FETCH NEXT ' . $end . ' ROWS ONLY';
+            case 'oracle': //version >=12c 可用
+
+                $info          = $this->info();
+                list($version) = explode('.', $info['version']);
+                if (intval($version) >= 12) {
+                    $data = ' OFFSET ' . $start . ' ROWS FETCH NEXT ' . $end . ' ROWS ONLY';
+                } else {
+                    $this->where([
+                        'rownum[>=]' => $start + 1,
+                        'rownum[<]'  => $end + 1,
+                    ]);
+                }
                 break;
         }
 
@@ -1498,7 +1580,8 @@ class Mokuyu
      */
     protected function appendBindParam(&$key, $value, $index = null): void
     {
-        $key = ':' . trim($key, ':');
+        //防止冲突,加个前缀
+        $key = ':bindparam_' . trim($key, ':');
         $tem = $key;
         while (true) {
             //没有绑定过这个参数直接绑定并跳出
@@ -1921,6 +2004,12 @@ class Mokuyu
         $resql = implode(') AND (', $arr);
         $resql = '(' . $resql . ')';
         $resql = $resql == '()' ? '' : $resql;
+
+        if ($this->databaseType === 'oracle') {
+            //oracle 分页关键字不能带引号
+            $resql = str_replace('"rownum"', 'rownum', $resql);
+        }
+
         if ($resql) {
             $this->queryParams['where'] = ' WHERE ' . $resql;
 
