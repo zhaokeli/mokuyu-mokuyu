@@ -634,7 +634,7 @@ class Mokuyu
             // $table_name = str_replace($this->yinhao, '', $this->queryParams['srcTable']);
             $table_name = $this->prefix . $this->parseTable($this->queryParams['srcTable']);
             $fieldArr   = [];
-            $ckey       = $table_name . '_fields_';
+            $ckey       = $this->databaseName . '_' . $table_name . '_fields_';
             switch ($this->databaseType) {
                 case 'mysql':
                     $sql = 'DESC ' . $this->tablePrefix($this->queryParams['srcTable']);
@@ -741,7 +741,7 @@ class Mokuyu
             // $table_name  = str_replace($this->yinhao, '', $this->queryParams['table']);
             $table_name  = $this->prefix . $this->parseTable($this->queryParams['srcTable']);
             $primaryName = '';
-            $ckey        = $table_name . '_primaryid_';
+            $ckey        = $this->databaseName . '_' . $table_name . '_primaryid_';
             switch ($this->databaseType) {
                 case 'mysql':
                     $sql = 'select COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA=\'' . $this->databaseName . '\' and TABLE_NAME=\'' . $table_name . '\'';
@@ -775,16 +775,18 @@ class Mokuyu
                         }
                     }
                 case 'pgsql':
-                    $sql = <<<eot
-select pg_constraint.conname as pk_name,pg_attribute.attname as colname,pg_type.typname as typename from
-pg_constraint  inner join pg_class
-on pg_constraint.conrelid = pg_class.oid
-inner join pg_attribute on pg_attribute.attrelid = pg_class.oid
-and  pg_attribute.attnum = pg_constraint.conkey[1]
-inner join pg_type on pg_type.oid = pg_attribute.atttypid
-where pg_class.relname = '{$table_name}'
-and pg_constraint.contype='p'
-eot;
+
+                    $sql = [
+                        'select pg_constraint.conname as pk_name,pg_attribute.attname as colname,pg_type.typname as typename from',
+                        'pg_constraint  inner join pg_class',
+                        'on pg_constraint.conrelid = pg_class.oid',
+                        'inner join pg_attribute on pg_attribute.attrelid = pg_class.oid',
+                        'and  pg_attribute.attnum = pg_constraint.conkey[1]',
+                        'inner join pg_type on pg_type.oid = pg_attribute.atttypid',
+                        'where pg_class.relname = \'' . $table_name . '\'',
+                        'and pg_constraint.contype=\'p\'',
+                    ];
+                    $sql = implode("\r\n", $sql);
                     $ckey .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
@@ -939,7 +941,7 @@ eot;
         }
         $isMulData = count($datas) > 1 ? true : false;
         //取表的所有字段
-        $table_fields = (array) $this->getFields();
+        $table_fields = $this->getFields();
         $index        = $isMulData ? 0 : null;
         $sql          = '';
         foreach ($datas as $data) {
@@ -948,7 +950,7 @@ eot;
             foreach ((array) $data as $key => $value) {
                 $field = lcfirst($key);
                 $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
-                if (!in_array($field, $table_fields) || $field == $pk) {
+                if (($table_fields && !in_array($field, $table_fields)) || $field == $pk) {
                     //过滤掉数据库中没有的字段,和主键
                     continue;
                 }
@@ -1388,7 +1390,7 @@ eot;
         $fields       = [];
         foreach ($data as $key => $value) {
             $info = $this->parseFormatField($key);
-            if (!in_array($info['field'], $table_fields)) {
+            if ($table_fields && !in_array($info['field'], $table_fields)) {
                 continue;
             }
             //字段+ - * / 本字段算术运算
@@ -2335,6 +2337,7 @@ eot;
 
         foreach ($columns as $key => $value) {
             $info = $this->parseFormatField($value);
+            //如果有联合查询的情况下,视情况解析出数据表
             if ($this->queryParams['join']) {
                 $fields = $this->getFields();
                 if (in_array($info['field'], $fields) && !$info['table']) {
