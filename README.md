@@ -64,7 +64,7 @@
     - [transaction(Closure callback)](#transactionclosure-callback)
   - [调试](#%e8%b0%83%e8%af%95)
     - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
-    - [debug(bool isdebug=true)](#debugbool-isdebugtrue)
+    - [abort(bool isAbort=true)](#abortbool-isaborttrue)
     - [getLastSql():string](#getlastsqlstring)
     - [getLastError():string](#getlasterrorstring)
     - [log():array](#logarray)
@@ -562,7 +562,7 @@ $db->transaction(function()use($data){
 
 默认为true,结果集为当前执行的sql语句
 
-### debug(bool isdebug=true)
+### abort(bool isAbort=true)
 
 默认为true，查询结果会直接中断，并输出sql语句
 

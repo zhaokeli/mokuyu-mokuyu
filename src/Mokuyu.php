@@ -58,16 +58,10 @@ class Mokuyu
     protected $databaseType;
 
     /**
-     * 调式开头
+     * 开启调式,关闭后如果有缓存缓存会缓存主键,表字段等信息
      * @var boolean
      */
     protected $debug = false;
-
-    /**
-     * 中断调试，会直接中断并输出当前sql语句
-     * @var boolean
-     */
-    protected $debugMode = false;
 
     /**
      * 错误信息保存
@@ -97,6 +91,12 @@ class Mokuyu
      * @var array
      */
     protected $hostList = [];
+
+    /**
+     * 中断调试，会直接中断并输出当前sql语句
+     * @var boolean
+     */
+    protected $isAbort = false;
 
     /**
      * 是否返回sql语句,true则返回语句,false返回对应的数据
@@ -266,6 +266,22 @@ class Mokuyu
     }
 
     /**
+     * 调试查询,程序会中断
+     * @authname [name]       0
+     * @DateTime 2019-12-31
+     * @Author   mokuyu
+     *
+     * @param  bool|boolean $isdebug [description]
+     * @return [type]
+     */
+    public function abort(bool $isAbort = true)
+    {
+        $this->isAbort = $isAbort;
+
+        return $this;
+    }
+
+    /**
      * 添加数据成功后返回添加成功的id
      * @authname [name]     0
      * @DateTime 2019-12-31
@@ -326,22 +342,6 @@ class Mokuyu
     public function count(string $field = '*')
     {
         return $this->summary('COUNT', [$field]);
-    }
-
-    /**
-     * 调试查询,程序会中断
-     * @authname [name]       0
-     * @DateTime 2019-12-31
-     * @Author   mokuyu
-     *
-     * @param  bool|boolean $isdebug [description]
-     * @return [type]
-     */
-    public function debug(bool $isdebug = true)
-    {
-        $this->debugMode = $isdebug;
-
-        return $this;
     }
 
     public function delete(int $id = 0)
@@ -413,7 +413,7 @@ class Mokuyu
 
                 return $redata;
             }
-            if ($this->debugMode) {
+            if ($this->isAbort) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
             $t1     = microtime(true);
@@ -1310,7 +1310,7 @@ class Mokuyu
 
                 return $redata;
             }
-            if ($this->debugMode) {
+            if ($this->isAbort) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
             $pdo = null;
@@ -2179,6 +2179,7 @@ class Mokuyu
         //重置为全局风格
         $this->temFieldMode = $this->fieldMode;
         $this->temTableMode = $this->tableMode;
+        $this->isAbort      = false;
         $this->fieldMap     = [];
         $this->queryParams  = [
             'table'        => '',
