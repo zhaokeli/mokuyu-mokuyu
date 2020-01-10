@@ -1680,7 +1680,7 @@ class Mokuyu
             ];
 
             foreach ($data as $sub_table => $relation) {
-                preg_match('/(\[(\<|\>|\>\<|\<\>)\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
+                preg_match('/(\[\s*?(\<|\>|\>\<|\<\>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
 
                 if ($match[2] != '' && $match[3] != '') {
                     $joinString    = $join_array[$match[2]];
@@ -2184,7 +2184,7 @@ class Mokuyu
             // 'isMap'         => false,
         ];
         //解析字段中 age[>]这一类的标识识,#使用数据库函数
-        if (preg_match('/(#?)([\w\(\)\.\-]+)(\[(\>|\>\=|\<|\<\=|\!|\<\>|\>\<|\!?~)\])/i', $field, $match)) {
+        if (preg_match('/(#?)([\w\(\)\.\-]+)(\[\s*?(\>|\>\=|\<|\<\=|\!|\<\>|\>\<|\!?~)\s*?\])/i', $field, $match)) {
             $arr['field']         = $match[2];
             $arr['rightOperator'] = $match[4];
         }
@@ -2371,7 +2371,7 @@ class Mokuyu
                 'elt'  => '<=',
                 'eq'   => '=',
                 'neq'  => '!='];
-            if (is_array($value) && isset($opArr[$value[0]])) {
+            if (is_array($value) && isset($value[0]) && isset($opArr[$value[0]])) {
                 $tj  = $value[0];
                 $val = $value[1];
                 if ($tj == 'in') {

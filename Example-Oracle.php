@@ -66,19 +66,21 @@ $result = $query->table('article')->add([
     'create_time' => time(),
     'update_time' => time(),
 ]);
-echo $result . PHP_EOL;
-$list = $query->table('article')->select();
+// echo $result . PHP_EOL;
+// $list = $query->table('article')->select();
 // $list = $query->table('LOGSTDBY$SKIP_SUPPORT')->select();
 // var_dump($list);
-die();
+// die();
 //添加数据
 $datanum = 100;
 $datas   = [];
 while (--$datanum > 0) {
 
     $datas[] = [
-        'title' => 'thisisphpdata!' . rand(100, 1000),
-        'views' => rand(100, 1000),
+        'title'       => 'thisisphpdata!' . rand(100, 1000),
+        'views'       => rand(100, 1000),
+        'create_time' => time(),
+        'update_time' => time(),
     ];
     //添加单个
     // $result = $query->debug(false)->table('article')->add([
@@ -94,7 +96,7 @@ $result = $query->debug(false)->table('article')->add($datas);
 // die();
 //测试平均数
 $value1 = $query->table('article')->avg(['views', 'article_id']);
-$value2 = $query->table('article')->avg('article . views, article_id');
+$value2 = $query->table('article')->avg('article.views, article_id');
 $value3 = $query->table('article')->count();
 $value4 = $query->table('article')->count('views');
 var_dump($value1);
@@ -120,12 +122,12 @@ $list = $query->table('event_log')
                   'push_time',
               ])
               ->where([
-                  ' and '  => [
+                  'and'    => [
                       'wuliu_name'     => 'sf',
                       'push_time[ < ]' => 10555555,
 
                   ],
-                  ' or '   => [
+                  'or'     => [
                       'routes'      => '',
                       'status[ > ]' => 11,
                   ],
