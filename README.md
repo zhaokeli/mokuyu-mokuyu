@@ -46,7 +46,6 @@
     - [getPK():string](#getpkstring)
     - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
     - [getQueryParams():array](#getqueryparamsarray)
-    - [getWhere(array data = []):array](#getwherearray-data--array)
     - [getFields():array](#getfieldsarray)
   - [执行原生SQL](#%e6%89%a7%e8%a1%8c%e5%8e%9f%e7%94%9fsql)
     - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
@@ -64,11 +63,16 @@
     - [transaction(Closure callback)](#transactionclosure-callback)
   - [调试](#%e8%b0%83%e8%af%95)
     - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
+    - [debug(isDebug=null)](#debugisdebugnull)
     - [abort(bool isAbort=true)](#abortbool-isaborttrue)
     - [getLastSql():string](#getlastsqlstring)
     - [getLastError():string](#getlasterrorstring)
     - [log():array](#logarray)
     - [info():array](#infoarray)
+  - [其它功能](#%e5%85%b6%e5%ae%83%e5%8a%9f%e8%83%bd)
+    - [setCache(CacheInterface obj): void](#setcachecacheinterface-obj-void)
+    - [setBindParam(array value): void](#setbindparamarray-value-void)
+    - [getWhere(array data = []):array](#getwherearray-data--array)
   - [SQLite示例](#sqlite%e7%a4%ba%e4%be%8b)
 
 <!-- /TOC -->
@@ -413,11 +417,7 @@ return [
 
 ### getQueryParams():array
 
-返回组装sql请求的参数数组
-
-### getWhere(array data = []):array
-
-返回生成的where条件，返回结果为
+返回组装sql连贯操作中的查询参数数组
 
 ### getFields():array
 
@@ -562,6 +562,11 @@ $db->transaction(function()use($data){
 
 默认为true,结果集为当前执行的sql语句
 
+### debug(isDebug=null)
+
+如果参数为null则返回当前数据库调试开启状态，否则设置调试状态
+关闭后如果有缓存对象则会缓存主键,表字段等信息
+
 ### abort(bool isAbort=true)
 
 默认为true，查询结果会直接中断，并输出sql语句
@@ -581,6 +586,20 @@ $db->transaction(function()use($data){
 ### info():array
 
 取服务器信息
+
+## 其它功能
+
+### setCache(CacheInterface obj): void
+
+设置缓存对象,可以加速数据库的访问,把常用的主键和字段信息保存到缓存中，缓存类需要实现接口 **Psr\SimpleCache\CacheInterface**
+
+### setBindParam(array value): void
+
+修改sql查询预处理后绑定的参数，这个可以配合**getWhere**来使用
+
+### getWhere(array data = []):array
+
+返回生成的where条件，参数可以为空，不为空的话会覆盖原来条件，使用这个方法后查询的所有参数为重置，就不能使用select update..等查询语句，条件需要重新设置。返回结果为 **[sql string,bind param]**
 
 ## SQLite示例
 

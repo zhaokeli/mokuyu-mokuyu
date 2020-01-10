@@ -344,6 +344,25 @@ class Mokuyu
         return $this->summary('COUNT', [$field]);
     }
 
+    /**
+     * 设置或获取调试状态
+     * @authname [name]     0
+     * @DateTime 2020-01-10
+     * @Author   mokuyu
+     *
+     * @param  [type]   $debug [description]
+     * @return [type]
+     */
+    public function debug($debug = null)
+    {
+        if ($debug !== null) {
+            $this->debug = $debug;
+        }
+
+        return $this->debug;
+
+    }
+
     public function delete(int $id = 0)
     {
 
