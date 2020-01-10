@@ -71,6 +71,12 @@ $query = new \mokuyu\database\Mokuyu([
         // PDO::ATTR_CASE              => PDO::CASE_NATURAL,
     ],
 ]);
+// CREATE TABLE kl_article (
+//     article_id INT IDENTITY ( 1, 1 ) PRIMARY KEY,
+//     title VARCHAR ( 255 ),
+//     create_time INT DEFAULT 0 NOT NULL,
+//     update_time INT DEFAULT 0 NOT NULL
+// )
 // $model = new \ank\database\Model();
 // $query = new \ank\database\Query($conn);
 $result = $query->table('article')->add([

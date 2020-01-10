@@ -661,6 +661,7 @@ class Mokuyu
                             }
                         }
                     }
+                    break;
                 case 'pgsql':
                     $sql = 'select * from information_schema.columns where table_schema=\'public\' and table_name=\'' . $table_name . '\';';
                     $ckey .= md5($sql);
@@ -675,6 +676,7 @@ class Mokuyu
                         }
 
                     }
+                    break;
                 case 'oracle':
                     $sql = 'SELECT table_name, column_name, data_type FROM all_tab_cols WHERE table_name = \'' . $table_name . '\'';
                     $ckey .= md5($sql);
@@ -689,6 +691,44 @@ class Mokuyu
                         }
 
                     }
+                    break;
+                case 'mssql':
+
+                    $sql = [
+                        'SELECT',
+                        '    ( CASE WHEN a.colorder= 1 THEN d.name ELSE \'\' END ) [table_name],',
+                        '    a.name [column_name],',
+                        '    b.name [column_type],',
+                        '    g.[value] AS [column_note]',
+                        'FROM',
+                        '    syscolumns a',
+                        '    LEFT JOIN systypes b ON a.xtype= b.xusertype',
+                        '    INNER JOIN sysobjects d ON a.id= d.id',
+                        '    AND d.xtype= \'U\'',
+                        '    AND d.name<> \'dtproperties\'',
+                        '    LEFT JOIN sys.extended_properties g ON a.id= g.major_id',
+                        '    AND a.colid = g.minor_id',
+                        'WHERE',
+                        '    d.[name] = \'' . $table_name . '\' --数据表名称',
+                        '',
+                        'ORDER BY',
+                        '    a.id,',
+                        '    a.colorder',
+                    ];
+                    $sql = implode("\r\n", $sql);
+                    $ckey .= md5($sql);
+                    $fieldArr = $this->cacheAction($ckey);
+                    if ($fieldArr === null) {
+                        $info = $this->pdoRead->query($sql);
+                        if ($info) {
+                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($info as $key => $value) {
+                                $fieldArr[] = $value['column_name'];
+                            }
+                        }
+
+                    }
+                    break;
 
             }
             $fieldArr = $fieldArr ?: [];
@@ -790,6 +830,7 @@ class Mokuyu
                             }
                         }
                     }
+                    break;
                 case 'pgsql':
 
                     $sql = [
@@ -820,10 +861,6 @@ class Mokuyu
                     }
                     break;
                 case 'oracle':
-                    // $sql = 'select * from user_cons_columns where constraint_name=(select constraint_name from user_constraints where table_name = UPPER(\'' . $table_name . '\') and constraint_type =\'P\')';
-                    //$sql = 'select cu.* from user_cons_columns cu, user_constraints au where cu.constraint_name = au.constraint_name and au.constraint_type = \'P\' and au.table_name = UPPER(\'' . $table_name . '\')';
-                    // $info = $this->pdoRead->query($sql);
-                    // $sql = implode("\r\n", $sql);
                     $sql = [
                         'SELECT',
                         '   C.CONSTRAINT_NAME,',
@@ -861,6 +898,40 @@ class Mokuyu
                         }
 
                     }
+                    break;
+                case 'mssql':
+                    $sql = [
+                        'SELECT',
+                        '    COL_NAME( object_id( \'' . $table_name . '\' ), c.colid )  [column_name]',
+                        'FROM',
+                        '    sysobjects a,',
+                        '    sysindexes b,',
+                        '    sysindexkeys c',
+                        'WHERE',
+                        '    a.name= b.name',
+                        '    AND b.id= c.id',
+                        '    AND b.indid= c.indid',
+                        '    AND a.xtype= \'PK\'',
+                        '    AND a.parent_obj= object_id( \'' . $table_name . '\' )',
+                        '    AND c.id= object_id( \'' . $table_name . '\' )',
+                    ];
+                    $sql = implode("\r\n", $sql);
+                    $ckey .= md5($sql);
+                    $primaryName = $this->cacheAction($ckey);
+                    //已经查询过并且没有主键的情况直接返回
+                    if ($primaryName === null) {
+                        $info = $this->pdoRead->query($sql);
+                        if ($info) {
+                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($info as $key => $value) {
+                                $primaryName = $value['column_name'];
+
+                                break;
+                            }
+                        }
+
+                    }
+                    break;
             }
             $primaryName = $primaryName ?: '';
             $this->cacheAction($ckey, $primaryName);
