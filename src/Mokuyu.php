@@ -2554,6 +2554,11 @@ class Mokuyu
      */
     protected function tablePrefix(string $table): string
     {
-        return $this->yinhao . $this->databaseName . $this->yinhao . '.' . $this->yinhao . $this->prefix . $this->parseTable($table) . $this->yinhao;
+        $table = $this->yinhao . $this->prefix . $this->parseTable($table) . $this->yinhao;
+        if ($this->databaseType === 'oracle') {
+            return $this->yinhao . $this->databaseName . $this->yinhao . '.' . $table;
+        }
+
+        return $table;
     }
 }
