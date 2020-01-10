@@ -1397,8 +1397,8 @@ class Mokuyu
 
     public function tableMode(int $type = 0)
     {
-        if ($type > 2 || $type < 0) {
-            throw new InvalidArgumentException('tableMode must be numeric(0,1,2)!');
+        if ($type > 3 || $type < 0) {
+            throw new InvalidArgumentException('tableMode must be numeric(0,1,2,3)!');
         }
         $this->temTableMode = $type;
 
@@ -2456,6 +2456,8 @@ class Mokuyu
             $table = $this->parseName($table, 1);
         } elseif ($this->temTableMode === 2) {
             $table = $this->parseName($table, 3);
+        } elseif ($this->temTableMode === 3) {
+            $table = strtoupper($this->parseName($table, 1));
         }
 
         return $table;
