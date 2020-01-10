@@ -60,7 +60,14 @@ $query = new \mokuyu\database\Mokuyu([
 // $model = new \ank\database\Model();
 // $query = new \ank\database\Query($conn);
 // var_dump($query);
+$query->table('article')->add([
+    'title'       => 'title',
+    'descr'       => 'descr',
+    'create_time' => time(),
+    'update_time' => time(),
+]);
 $list = $query->table('article')->select();
+
 // $list = $query->table('LOGSTDBY$SKIP_SUPPORT')->select();
 var_dump($list);
 die();
