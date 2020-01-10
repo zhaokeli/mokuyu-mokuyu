@@ -164,6 +164,7 @@ class Mokuyu
 
     /**
      * 数据表风格,把传入的表名转为下面
+     * 前提:前缀还是要加的
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
      * @var null
      */
@@ -1755,7 +1756,7 @@ eot;
                     $dbname = $server ?
                     '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName :
                     $this->databaseName;
-
+// $conn_string = '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))';
                     $dsn = 'oci:dbname=' . $dbname . ($this->charset ? ';charset=' . $this->charset : '');
                     break;
 
@@ -2459,6 +2460,6 @@ eot;
      */
     protected function tablePrefix(string $table): string
     {
-        return $this->yinhao . $this->prefix . $this->parseTable($table) . $this->yinhao;
+        return $this->yinhao . $this->databaseName . $this->yinhao . '.' . $this->yinhao . $this->prefix . $this->parseTable($table) . $this->yinhao;
     }
 }
