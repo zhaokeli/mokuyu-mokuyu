@@ -1179,7 +1179,11 @@ class Mokuyu
                 $start = 0;
             }
         }
-        $data = '';
+        $start = intval($start);
+        $end   = intval($end);
+        $start = $start >= 0 ? $start : 0;
+        $end   = $end >= 0 ? $end : 0;
+        $data  = '';
         switch ($this->databaseType) {
             case 'mysql':
             // $data = ' LIMIT ' . $start . ' ,' . $end;
@@ -2582,6 +2586,10 @@ class Mokuyu
         $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
         if (!isset($arr[$func]) || !$this->queryParams['table']) {
             return 0;
+        }
+        //如果是count的话把排序去掉,否则字段中有别名时可能会出错
+        if ($func === 'COUNT') {
+            $this->queryParams['order'] = '';
         }
 
         //字段转成数组
