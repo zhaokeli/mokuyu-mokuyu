@@ -1542,18 +1542,27 @@ class Mokuyu
      * @param  array    $data [description]
      * @return [type]
      */
-    public function update(array $data)
+    public function update(array $datas)
     {
 
         if (empty($this->queryParams['table'])) {
             return 0;
         }
+        if (count($datas) == count($datas, 1)) {
+            $datas = [$datas];
+        }
+        $isMulData = count($datas) > 1 ? true : false;
+        $index     = $isMulData ? 0 : null;
+
+        $whereStr = '';
+        $pk       = '';
         if (empty($this->queryParams['where'])) {
             $pk = $this->getPK();
             if ($pk) {
-                if (isset($data[$pk])) {
-                    $this->where([$pk => $data[$pk]]);
-                    unset($data[$pk]); //删除对主键的设置
+                if (isset($datas[0][$pk])) {
+                    // $this->where([$pk => $datas[0][$pk]]);
+                    // unset($datas[0][$pk]); //删除对主键的设置':bindparam_' . trim($key, ':');
+                    $whereStr = ' WHERE ' . $this->yinhao . $pk . $this->yinhao . ' = :bindparam_' . $pk;
                 } else {
                     return 0;
                 }
@@ -1562,11 +1571,19 @@ class Mokuyu
             }
         }
         $this->buildSqlConf();
+        if (!$whereStr) {
+            $whereStr = $this->queryParams['where'];
+        }
         //取表的所有字段
         $table_fields = $this->getFields();
         $fields       = [];
-        foreach ($data as $key => $value) {
+        foreach ($datas as $key => $value) {
             $info = $this->parseFormatField($key);
+            //如果是主键的话就加参数然后,跳过
+            if ($pk && $info['field'] == $pk) {
+                $this->bindParam[$index][':bindparam_' . $pk] = $value[$pk];
+                continue;
+            }
             if ($table_fields && !in_array($info['field'], $table_fields)) {
                 continue;
             }
@@ -1593,23 +1610,24 @@ class Mokuyu
                     preg_match("/\(JSON\)\s*([\w]+)/i", $key, $column_match);
                     $this->appendBindParam($col,
                         isset($column_match[0]) ? json_encode($value) : serialize($value)
-                    );
+                        , $index);
 
                     $fields[] = $column . ' = ' . $col;
                 } else if (is_bool($value)) {
-                    $this->appendBindParam($col, ($value ? '1' : '0'));
+                    $this->appendBindParam($col, ($value ? '1' : '0'), $index);
                     $fields[] = $column . ' = ' . $col;
                 } else if (is_integer($value) || is_double($value) || is_string($value)) {
-                    $this->appendBindParam($col, $value);
+                    $this->appendBindParam($col, $value, $index);
                     $fields[] = $column . ' = ' . $col;
                 } else {
-                    $this->appendBindParam($col, $value);
+                    $this->appendBindParam($col, $value, $index);
                     $fields[] = $column . ' = ' . $col;
                 }
             }
+            $isMulData && $index++;
         }
 
-        return $this->exec('UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $this->queryParams['where']);
+        return $this->exec('UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $whereStr);
     }
 
     /**
