@@ -78,7 +78,31 @@ while (--$datanum > 0) {
     // die();
     // echo $result . "\n";
 }
+
 $result = $query->abort(false)->table('article')->add($datas);
+
+//测试批量事务更新
+$updateData = [
+    [
+        'article_id' => 1,
+        'views'      => rand(10, 99) + 9999,
+    ],
+    [
+        'article_id' => 2,
+        'views'      => rand(10, 99) + 9999,
+    ],
+    [
+        'article_id' => 3,
+        'views'      => rand(10, 99) + 9999,
+    ],
+    [
+        'article_id' => 4,
+        'views'      => rand(10, 99) + 9999,
+    ],
+];
+
+$result = $query->table('article')->update($updateData);
+echo 'update result ', $result . PHP_EOL;
 // echo $result;
 // die();
 //测试平均数

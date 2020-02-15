@@ -1569,6 +1569,8 @@ class Mokuyu
             } else {
                 return 0;
             }
+        } elseif ($isMulData) {
+            return 0;
         }
         $this->buildSqlConf();
         if (!$whereStr) {
@@ -1577,57 +1579,66 @@ class Mokuyu
         //取表的所有字段
         $table_fields = $this->getFields();
         $fields       = [];
-        foreach ($datas as $key => $value) {
-            $info = $this->parseFormatField($key);
-            //如果是主键的话就加参数然后,跳过
-            if ($pk && $info['field'] == $pk) {
-                $this->bindParam[$index][':bindparam_' . $pk] = $value[$pk];
-                continue;
-            }
-            if ($table_fields && !in_array($info['field'], $table_fields)) {
-                continue;
-            }
-            //字段+ - * / 本字段算术运算
-            preg_match('/([\w]+)(\[(\+|\-|\*|\/)\])?/i', $info['field'], $match);
-            if (isset($match[3])) {
-                if (is_numeric($value)) {
-                    $fields[] = $this->joinField($match[1]) . ' = ' . $this->joinField($match[1]) . ' ' . $match[3] . ' ' . $value;
+        foreach ($datas as $data) {
+            foreach ($data as $key => $value) {
+                $info = $this->parseFormatField($key);
+                //如果是主键的话就加参数然后,跳过
+                if ($pk && $info['field'] == $pk) {
+                    if ($isMulData) {
+                        $this->bindParam[$index][':bindparam_' . $pk] = $value;
+                    } else {
+                        $this->bindParam[':bindparam_' . $pk] = $value;
+                    }
+                    continue;
                 }
-            } else {
-                //如果join不为空的话就把字段默认加上第一个表为前缀
-                if ($this->queryParams['join'] && !$info['table']) {
-                    $info['table'] = trim($this->queryParams['table'], $this->yinhao);
+                if ($table_fields && !in_array($info['field'], $table_fields)) {
+                    continue;
                 }
-                $col    = ':' . $info['field'];
-                $column = $this->yinhao . $info['field'] . $this->yinhao;
-                if ($info['table']) {
-                    $col .= '_' . $info['table'];
-                    $column = $this->yinhao . $info['table'] . $this->yinhao . '.' . $column;
-                }
-                if (is_null($value)) {
-                    $fields[] = $column . ' = NULL';
-                } else if (is_object($value) || is_array($value)) {
-                    preg_match("/\(JSON\)\s*([\w]+)/i", $key, $column_match);
-                    $this->appendBindParam($col,
-                        isset($column_match[0]) ? json_encode($value) : serialize($value)
-                        , $index);
-
-                    $fields[] = $column . ' = ' . $col;
-                } else if (is_bool($value)) {
-                    $this->appendBindParam($col, ($value ? '1' : '0'), $index);
-                    $fields[] = $column . ' = ' . $col;
-                } else if (is_integer($value) || is_double($value) || is_string($value)) {
-                    $this->appendBindParam($col, $value, $index);
-                    $fields[] = $column . ' = ' . $col;
+                //字段+ - * / 本字段算术运算
+                preg_match('/([\w]+)(\[(\+|\-|\*|\/)\])?/i', $info['field'], $match);
+                if (isset($match[3])) {
+                    if (is_numeric($value)) {
+                        $fields[] = $this->joinField($match[1]) . ' = ' . $this->joinField($match[1]) . ' ' . $match[3] . ' ' . $value;
+                    }
                 } else {
-                    $this->appendBindParam($col, $value, $index);
-                    $fields[] = $column . ' = ' . $col;
+                    //如果join不为空的话就把字段默认加上第一个表为前缀
+                    if ($this->queryParams['join'] && !$info['table']) {
+                        $info['table'] = trim($this->queryParams['table'], $this->yinhao);
+                    }
+                    $col    = ':' . $info['field'];
+                    $column = $this->yinhao . $info['field'] . $this->yinhao;
+                    if ($info['table']) {
+                        $col .= '_' . $info['table'];
+                        $column = $this->yinhao . $info['table'] . $this->yinhao . '.' . $column;
+                    }
+                    if (is_null($value)) {
+                        $fields[] = $column . ' = NULL';
+                    } else if (is_object($value) || is_array($value)) {
+                        preg_match("/\(JSON\)\s*([\w]+)/i", $key, $column_match);
+                        $this->appendBindParam($col,
+                            isset($column_match[0]) ? json_encode($value) : serialize($value)
+                            , $index);
+
+                        $fields[] = $column . ' = ' . $col;
+                    } else if (is_bool($value)) {
+                        $this->appendBindParam($col, ($value ? '1' : '0'), $index);
+                        $fields[] = $column . ' = ' . $col;
+                    } else if (is_integer($value) || is_double($value) || is_string($value)) {
+                        $this->appendBindParam($col, $value, $index);
+                        $fields[] = $column . ' = ' . $col;
+                    } else {
+                        $this->appendBindParam($col, $value, $index);
+                        $fields[] = $column . ' = ' . $col;
+                    }
                 }
+            }
+            if ($index === 0 || is_null($index)) {
+                $sql = 'UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $whereStr;
             }
             $isMulData && $index++;
         }
 
-        return $this->exec('UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $whereStr);
+        return $this->exec($sql);
     }
 
     /**
