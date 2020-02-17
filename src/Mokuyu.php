@@ -363,22 +363,30 @@ class Mokuyu
 
     }
 
-    public function delete(int $id = 0)
+    /**
+     * 删除数据
+     * @authname [name]      0
+     * @DateTime 2020-02-17
+     * @Author   mokuyu
+     *
+     * @param  int|integer $id 可以为bool true删除所有数据,如果为int则为主键id
+     * @return [type]
+     */
+    public function delete($id = 0)
     {
 
         if (empty($this->queryParams['table'])) {
             return 0;
         }
-        if (is_numeric($id) && $id) {
+        if (!$this->queryParams['where'] && $id !== true) {
+            return 0;
+        }
+        if ($id && is_numeric($id)) {
             $pk = $this->getPK();
             if (!$pk) {
                 return 0;
             }
             $this->where([$pk => $id]);
-        } else {
-            if (!$this->queryParams['where'] && $id !== true) {
-                return 0;
-            }
         }
         $this->buildSqlConf();
 
