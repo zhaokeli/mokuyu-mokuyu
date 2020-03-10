@@ -1,6 +1,6 @@
 <?php
-$newdataname = 'newtestdata';
-$databaseSql = <<<eot
+$newdataname  = 'newtestdata';
+$databaseSql  = <<<eot
 CREATE DATABASE "{$newdataname}"
 eot;
 $datatableSql = <<<eot

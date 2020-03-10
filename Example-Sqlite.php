@@ -22,7 +22,7 @@ CREATE TABLE "kl_article" (
 );
 ');
 
-$data = [
+$data   = [
     'title'       => 'testusername',
     'views'       => rand(100, 1000),
     'create_time' => time(),

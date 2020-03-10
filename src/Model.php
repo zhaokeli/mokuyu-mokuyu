@@ -1,5 +1,6 @@
 <?php
 declare (strict_types = 1);
+
 namespace mokuyu\database;
 
 /**
@@ -13,10 +14,11 @@ abstract class Model
      * 字段别名,查询过程中会自动替换为真实的字段
      * @var array
      */
-    protected $fieldMap = [
-        //格式为 别名(查询)字段=>数据库真实字段
-        // 'push_time' => 'create_time',
-    ];
+    protected $fieldMap
+        = [
+            //格式为 别名(查询)字段=>数据库真实字段
+            // 'push_time' => 'create_time',
+        ];
 
     /**
      * 字段风格,把传入的字段转为下面

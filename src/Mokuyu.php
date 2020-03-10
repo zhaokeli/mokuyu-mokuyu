@@ -3,12 +3,11 @@
  * Mokuyu database
  * https://www.zhaokeli.com
  * Version 1.0.0
- *
  * Copyright 2020, Mokuyu
  * Released under the MIT license
- *
  */
 declare (strict_types = 1);
+
 namespace mokuyu\database;
 
 use Closure;
@@ -74,10 +73,11 @@ class Mokuyu
      * 格式为 别名(查询)字段=>数据库真实字段
      * @var [type]
      */
-    protected $fieldMap = [
-        //格式为 别名(查询)字段=>数据库真实字段
-        // 'push_time' => 'create_time',
-    ];
+    protected $fieldMap
+        = [
+            //格式为 别名(查询)字段=>数据库真实字段
+            // 'push_time' => 'create_time',
+        ];
 
     /**
      * 字段风格,把传入的字段转为下面
@@ -114,20 +114,21 @@ class Mokuyu
      * pdo配置项
      * @var [type]
      */
-    protected $options = [
-        // 抛出 exceptions 异常。
-        PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION,
-        //将 NULL 转换成空字符串
-        PDO::ATTR_ORACLE_NULLS      => PDO::NULL_TO_STRING,
-        //禁用本地模拟prepare
-        PDO::ATTR_EMULATE_PREPARES  => false,
-        //长连接
-        // PDO::ATTR_PERSISTENT        => true,
-        //提取的时候将数值转换为字符串
-        PDO::ATTR_STRINGIFY_FETCHES => false,
-        //查询出来字段小写
-        // PDO::ATTR_CASE              => PDO::CASE_NATURAL,
-    ];
+    protected $options
+        = [
+            // 抛出 exceptions 异常。
+            PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION,
+            //将 NULL 转换成空字符串
+            PDO::ATTR_ORACLE_NULLS      => PDO::NULL_TO_STRING,
+            //禁用本地模拟prepare
+            PDO::ATTR_EMULATE_PREPARES  => false,
+            //长连接
+            // PDO::ATTR_PERSISTENT        => true,
+            //提取的时候将数值转换为字符串
+            PDO::ATTR_STRINGIFY_FETCHES => false,
+            //查询出来字段小写
+            // PDO::ATTR_CASE              => PDO::CASE_NATURAL,
+        ];
 
     /**
      * 数据库密码
@@ -204,7 +205,6 @@ class Mokuyu
      * 初始化连接
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     *
      * @param array $config [description]
      */
     public function __construct(array $config)
@@ -241,9 +241,8 @@ class Mokuyu
      * @authname [权限名字]     0
      * @DateTime 2019-12-11
      * @Author   mokuyu
-     *
-     * @param  [type]   $name [description]
-     * @return [type]
+     * @param    [type]   $name [description]
+     * @return   [type]
      */
     public function __get($name)
     {
@@ -251,10 +250,12 @@ class Mokuyu
             $this->pdoWrite = $this->buildPDO($this->hostList['w'][array_rand($this->hostList['w'])]);
 
             return $this->pdoWrite;
-        } else if ($name === 'pdoRead') {
+        }
+        elseif ($name === 'pdoRead') {
             if (isset($this->hostList['r'])) {
                 $this->pdoRead = $this->buildPDO($this->hostList['r'][array_rand($this->hostList['r'])]);
-            } else {
+            }
+            else {
                 $this->pdoRead = $this->pdoWrite;
             }
 
@@ -270,9 +271,8 @@ class Mokuyu
      * @authname [name]       0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  bool|boolean $isdebug [description]
-     * @return [type]
+     * @param bool|boolean $isdebug [description]
+     * @return   [type]
      */
     public function abort(bool $isAbort = true)
     {
@@ -286,7 +286,6 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
      * @param array $datas [description]
      */
     public function add(array $datas)
@@ -304,8 +303,7 @@ class Mokuyu
      * 开启事务
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function beginTransaction()
     {
@@ -318,8 +316,7 @@ class Mokuyu
      * @authname [权限名字]     0
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function clearCache()
     {
@@ -331,8 +328,7 @@ class Mokuyu
      * 提交事务的操作
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function commit()
     {
@@ -349,9 +345,8 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2020-01-10
      * @Author   mokuyu
-     *
-     * @param  [type]   $debug [description]
-     * @return [type]
+     * @param    [type]   $debug [description]
+     * @return   [type]
      */
     public function debug($debug = null)
     {
@@ -368,9 +363,8 @@ class Mokuyu
      * @authname [name]      0
      * @DateTime 2020-02-17
      * @Author   mokuyu
-     *
-     * @param  int|integer $id 可以为bool true删除所有数据,如果为int则为主键id
-     * @return [type]
+     * @param int|integer $id 可以为bool true删除所有数据,如果为int则为主键id
+     * @return   [type]
      */
     public function delete($id = 0)
     {
@@ -395,7 +389,8 @@ class Mokuyu
         $join  = $this->queryParams['join'];
         if ($join) {
             return $this->exec('DELETE ' . $table . '.* FROM ' . $table . $join . $where);
-        } else {
+        }
+        else {
             return $this->exec('DELETE FROM ' . $table . $where);
         }
 
@@ -406,8 +401,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function error()
     {
@@ -418,10 +412,9 @@ class Mokuyu
      * 执行更新添加操作
      * @DateTime 2019-10-04
      * @Author   mokuyu
-     *
-     * @param  [type]   $sql   [description]
-     * @param  [type]   $param [description]
-     * @return [type]
+     * @param    [type]   $sql   [description]
+     * @param    [type]   $param [description]
+     * @return   [type]
      */
     public function exec(string $sql, array $param = [])
     {
@@ -450,7 +443,8 @@ class Mokuyu
 
                 if (count($this->bindParam) == count($this->bindParam, 1)) {
                     $sth->execute($this->bindParam);
-                } else {
+                }
+                else {
                     //批量执行操作
                     $this->beginTransaction();
                     $isTransaction = true;
@@ -461,7 +455,8 @@ class Mokuyu
                     $this->commit();
                 }
                 $result = $sth->rowCount();
-            } else {
+            }
+            else {
                 $result = $this->pdoWrite->exec($sql);
             }
             $t2 = microtime(true);
@@ -475,7 +470,8 @@ class Mokuyu
                 $err = $this->pdoWrite->errorInfo();
                 if ($err[0] === '00000' || $err[0] === '01000') {
                     $result = true;
-                } else {
+                }
+                else {
                     $this->errors[] = $this->pdoWrite->errorInfo()[2];
                     $this->showError(end($this->errors));
                     $result = false;
@@ -497,9 +493,8 @@ class Mokuyu
      * @authname [name]       0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  bool|boolean $bo [description]
-     * @return [type]
+     * @param bool|boolean $bo [description]
+     * @return   [type]
      */
     public function fetchSql(bool $bo = true)
     {
@@ -520,9 +515,8 @@ class Mokuyu
      * @authname [权限名字]     0
      * @DateTime 2019-10-16
      * @Author   mokuyu
-     *
-     * @param  array    $map [description]
-     * @return [type]
+     * @param array $map [description]
+     * @return   [type]
      */
     public function fieldMap(array $map)
     {
@@ -536,9 +530,8 @@ class Mokuyu
      * @authname [权限名字]     0
      * @DateTime 2019-10-16
      * @Author   mokuyu
-     *
-     * @param  integer  $type [description]
-     * @return [type]
+     * @param integer $type [description]
+     * @return   [type]
      */
     public function fieldMode(int $type = 0)
     {
@@ -554,11 +547,10 @@ class Mokuyu
      * 对指定字段进行运算更新
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     *
-     * @param  string      $field     [description]
-     * @param  int|integer $num       [description]
-     * @param  string      $operation [description]
-     * @return [type]
+     * @param string      $field     [description]
+     * @param int|integer $num       [description]
+     * @param string      $operation [description]
+     * @return   [type]
      */
     public function fieldOperation(string $field, int $num = 0, string $operation = '+')
     {
@@ -581,9 +573,8 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  [type]   $field [description]
-     * @return [type]
+     * @param    [type]   $field [description]
+     * @return   [type]
      */
     public function forceIndex(string $field)
     {
@@ -628,20 +619,24 @@ class Mokuyu
                     if (strpos($columns, ' AS ') !== false) {
                         //替换掉字段中的引号和 *** as 等字符
                         $columns = preg_replace(['/' . $this->yinhao . '/', '/.*? AS /'], '', $columns);
-                    } else if (preg_match('/^[a-zA-Z0-9_\.' . $this->yinhao . ']+$/', $columns, $mat)) {
+                    }
+                    elseif (preg_match('/^[a-zA-Z0-9_\.' . $this->yinhao . ']+$/', $columns, $mat)) {
                         //判断是不是合法的字段项，如果有表名去掉表名
                         $columns = preg_replace(['/' . $this->yinhao . '/', '/^[\w]*\./i'], '', $columns);
                     }
                     // $columns=str_replace('')
 
                     return $data[0][$columns];
-                } else {
+                }
+                else {
                     return $data[0];
                 }
-            } else {
+            }
+            else {
                 return false;
             }
-        } else {
+        }
+        else {
             return false;
         }
     }
@@ -650,8 +645,7 @@ class Mokuyu
      * 取当前表的所有字段
      * @DateTime 2018-04-27
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function getFields(): array
     {
@@ -665,8 +659,8 @@ class Mokuyu
             $ckey       = $this->databaseName . '_' . $table_name . '_fields_';
             switch ($this->databaseType) {
                 case 'mysql':
-                    $sql = 'DESC ' . $this->tablePrefix($this->queryParams['srcTable']);
-                    $ckey .= md5($sql);
+                    $sql      = 'DESC ' . $this->tablePrefix($this->queryParams['srcTable']);
+                    $ckey     .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
                         $tm = $this->pdoRead->prepare($sql);
@@ -677,7 +671,7 @@ class Mokuyu
                 case 'sqlite':
                     $sql = 'pragma table_info (\'' . $table_name . '\')';
 
-                    $ckey .= md5($sql);
+                    $ckey     .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
                         $info = $this->pdoRead->query($sql);
@@ -690,8 +684,8 @@ class Mokuyu
                     }
                     break;
                 case 'pgsql':
-                    $sql = 'select * from information_schema.columns where table_schema=\'public\' and table_name=\'' . $table_name . '\';';
-                    $ckey .= md5($sql);
+                    $sql      = 'select * from information_schema.columns where table_schema=\'public\' and table_name=\'' . $table_name . '\';';
+                    $ckey     .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
                         $info = $this->pdoRead->query($sql);
@@ -705,8 +699,8 @@ class Mokuyu
                     }
                     break;
                 case 'oracle':
-                    $sql = 'SELECT table_name, column_name, data_type FROM all_tab_cols WHERE table_name = \'' . $table_name . '\'';
-                    $ckey .= md5($sql);
+                    $sql      = 'SELECT table_name, column_name, data_type FROM all_tab_cols WHERE table_name = \'' . $table_name . '\'';
+                    $ckey     .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
                         $info = $this->pdoRead->query($sql);
@@ -721,7 +715,7 @@ class Mokuyu
                     break;
                 case 'mssql':
 
-                    $sql = [
+                    $sql      = [
                         'SELECT',
                         '    ( CASE WHEN a.colorder= 1 THEN d.name ELSE \'\' END ) [table_name],',
                         '    a.name [column_name],',
@@ -742,8 +736,8 @@ class Mokuyu
                         '    a.id,',
                         '    a.colorder',
                     ];
-                    $sql = implode("\r\n", $sql);
-                    $ckey .= md5($sql);
+                    $sql      = implode("\r\n", $sql);
+                    $ckey     .= md5($sql);
                     $fieldArr = $this->cacheAction($ckey);
                     if ($fieldArr === null) {
                         $info = $this->pdoRead->query($sql);
@@ -772,8 +766,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function getLastError()
     {
@@ -785,8 +778,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function getLastSql()
     {
@@ -798,9 +790,8 @@ class Mokuyu
      * @authname [权限名字]       0
      * @DateTime 2019-12-11
      * @Author   mokuyu
-     *
-     * @param  bool|boolean $isWrite 返回的对象为读or写,默认为读连接
-     * @return [type]
+     * @param bool|boolean $isWrite 返回的对象为读or写,默认为读连接
+     * @return   [type]
      */
     public function getPDO(bool $isWrite = false): PDO
     {
@@ -812,8 +803,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function getPK()
     {
@@ -827,8 +817,8 @@ class Mokuyu
             $ckey        = $this->databaseName . '_' . $table_name . '_primaryid_';
             switch ($this->databaseType) {
                 case 'mysql':
-                    $sql = 'select COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA=\'' . $this->databaseName . '\' and TABLE_NAME=\'' . $table_name . '\'';
-                    $ckey .= md5($sql);
+                    $sql         = 'select COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where TABLE_SCHEMA=\'' . $this->databaseName . '\' and TABLE_NAME=\'' . $table_name . '\'';
+                    $ckey        .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
@@ -841,8 +831,8 @@ class Mokuyu
 
                     break;
                 case 'sqlite':
-                    $sql = 'pragma table_info (\'' . $table_name . '\')';
-                    $ckey .= md5($sql);
+                    $sql         = 'pragma table_info (\'' . $table_name . '\')';
+                    $ckey        .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
@@ -860,7 +850,7 @@ class Mokuyu
                     break;
                 case 'pgsql':
 
-                    $sql = [
+                    $sql         = [
                         'select pg_constraint.conname as pk_name,pg_attribute.attname as colname,pg_type.typname as typename from',
                         'pg_constraint  inner join pg_class',
                         'on pg_constraint.conrelid = pg_class.oid',
@@ -870,8 +860,8 @@ class Mokuyu
                         'where pg_class.relname = \'' . $table_name . '\'',
                         'and pg_constraint.contype=\'p\'',
                     ];
-                    $sql = implode("\r\n", $sql);
-                    $ckey .= md5($sql);
+                    $sql         = implode("\r\n", $sql);
+                    $ckey        .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
@@ -888,7 +878,7 @@ class Mokuyu
                     }
                     break;
                 case 'oracle':
-                    $sql = [
+                    $sql         = [
                         'SELECT',
                         '   C.CONSTRAINT_NAME,',
                         '   CC.COLUMN_NAME,',
@@ -909,8 +899,8 @@ class Mokuyu
                         '   1,',
                         '   3',
                     ];
-                    $sql = implode("\r\n", $sql);
-                    $ckey .= md5($sql);
+                    $sql         = implode("\r\n", $sql);
+                    $ckey        .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
@@ -927,7 +917,7 @@ class Mokuyu
                     }
                     break;
                 case 'mssql':
-                    $sql = [
+                    $sql         = [
                         'SELECT',
                         '    COL_NAME( object_id( \'' . $table_name . '\' ), c.colid )  [column_name]',
                         'FROM',
@@ -942,8 +932,8 @@ class Mokuyu
                         '    AND a.parent_obj= object_id( \'' . $table_name . '\' )',
                         '    AND c.id= object_id( \'' . $table_name . '\' )',
                     ];
-                    $sql = implode("\r\n", $sql);
-                    $ckey .= md5($sql);
+                    $sql         = implode("\r\n", $sql);
+                    $ckey        .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
                     if ($primaryName === null) {
@@ -974,8 +964,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function getQueryParams(): array
     {
@@ -986,9 +975,8 @@ class Mokuyu
      * 返回生成的条件语句
      * @DateTime 2019-10-04
      * @Author   mokuyu
-     *
-     * @param  [type]   $data [description]
-     * @return [type]
+     * @param    [type]   $data [description]
+     * @return   [type]
      */
     public function getWhere(array $data = []): array
     {
@@ -1007,9 +995,8 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  string   $data [description]
-     * @return [type]
+     * @param string $data [description]
+     * @return   [type]
      */
     public function group(string $data)
     {
@@ -1023,7 +1010,6 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
      * @return boolean
      */
     public function has()
@@ -1048,8 +1034,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function info()
     {
@@ -1083,9 +1068,8 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  array    $datas [description]
-     * @return [type]
+     * @param array $datas [description]
+     * @return   [type]
      */
     public function insert(array $datas)
     {
@@ -1109,7 +1093,7 @@ class Mokuyu
         foreach ($datas as $data) {
             $values  = [];
             $columns = [];
-            foreach ((array) $data as $key => $value) {
+            foreach ((array)$data as $key => $value) {
                 $field = lcfirst($key);
                 $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
                 if (($table_fields && !in_array($field, $table_fields)) || $field == $pk) {
@@ -1123,13 +1107,17 @@ class Mokuyu
 
                 if (is_null($value)) {
                     $this->appendBindParam($col, 'NULL', $index);
-                } else if (is_object($value) || is_array($value)) {
+                }
+                elseif (is_object($value) || is_array($value)) {
                     $this->appendBindParam($col, json_encode($value), $index);
-                } else if (is_bool($value)) {
+                }
+                elseif (is_bool($value)) {
                     $this->appendBindParam($col, ($value ? '1' : '0'), $index);
-                } else if (is_integer($value) || is_double($value) || is_string($value)) {
+                }
+                elseif (is_integer($value) || is_double($value) || is_string($value)) {
                     $this->appendBindParam($col, $value, $index);
-                } else {
+                }
+                else {
                     $this->appendBindParam($col, $value, $index);
                 }
                 $values[] = $col;
@@ -1179,10 +1167,12 @@ class Mokuyu
     {
         if (is_null($end)) {
             if (strpos($start . '', ',') !== false) {
-                list($start, $end) = explode(',', $start);
-            } else if (is_array($start) && count($start) >= 2) {
-                list($start, $end) = $start;
-            } else {
+                [$start, $end] = explode(',', $start);
+            }
+            elseif (is_array($start) && count($start) >= 2) {
+                [$start, $end] = $start;
+            }
+            else {
                 $end   = $start;
                 $start = 0;
             }
@@ -1194,8 +1184,8 @@ class Mokuyu
         $data  = '';
         switch ($this->databaseType) {
             case 'mysql':
-            // $data = ' LIMIT ' . $start . ' ,' . $end;
-            // break;
+                // $data = ' LIMIT ' . $start . ' ,' . $end;
+                // break;
             case 'sqlite':
             case 'pgsql':
                 $data = ' LIMIT ' . $end . ' OFFSET ' . $start;
@@ -1203,11 +1193,12 @@ class Mokuyu
             case 'mssql':  //12c
             case 'oracle': //version >=12c 可用
 
-                $info          = $this->info();
-                list($version) = explode('.', $info['version']);
+                $info = $this->info();
+                [$version] = explode('.', $info['version']);
                 if (intval($version) >= 12) {
                     $data = ' OFFSET ' . $start . ' ROWS FETCH NEXT ' . $end . ' ROWS ONLY';
-                } else {
+                }
+                else {
                     $this->where([
                         'rownum[>=]' => $start + 1,
                         'rownum[<]'  => $end + 1,
@@ -1248,10 +1239,9 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  string   $page     当前页数
-     * @param  integer  $pageSize 分页大小
-     * @return [type]
+     * @param string  $page     当前页数
+     * @param integer $pageSize 分页大小
+     * @return   [type]
      */
     public function page(int $page = 1, int $pageSize = 15)
     {
@@ -1263,9 +1253,8 @@ class Mokuyu
      * @authname [name]      0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     *
-     * @param  integer     $intpage                当前页
-     * @param  int|integer $pageSize               分页大小
+     * @param integer     $intpage  当前页
+     * @param int|integer $pageSize 分页大小
      * @return 返回      [list=>[],count=>100]
      */
     public function paginate(int $page = 1, int $pageSize = 15)
@@ -1316,10 +1305,9 @@ class Mokuyu
      * [query description]
      * @DateTime 2019-05-02
      * @Author   mokuyu
-     *
-     * @param  [type]   $sql           [description]
-     * @param  boolean  $isReturnArray 是否直接返回数组,如果这个是数组的话默认设置成要绑定的参数并返回数组数据
-     * @return [type]
+     * @param    [type]   $sql           [description]
+     * @param boolean $isReturnArray 是否直接返回数组,如果这个是数组的话默认设置成要绑定的参数并返回数组数据
+     * @return   [type]
      */
     public function query(string $sql, array $param = [])
     {
@@ -1347,7 +1335,8 @@ class Mokuyu
             $pdo = null;
             if ($this->queryParams['useWriteConn'] === true) {
                 $pdo = $this->pdoWrite;
-            } else {
+            }
+            else {
                 $pdo = $this->pdoRead ?: $this->pdoWrite;
             }
 
@@ -1357,7 +1346,8 @@ class Mokuyu
                 $query = $pdo->prepare($sql);
                 $query->execute($this->bindParam);
 
-            } else {
+            }
+            else {
                 $query = $pdo->query($sql);
             }
             $t2 = microtime(true);
@@ -1374,7 +1364,8 @@ class Mokuyu
                 }
 
                 return $da ?: [];
-            } else {
+            }
+            else {
                 return $query;
             }
         } catch (PDOException $e) {
@@ -1393,8 +1384,7 @@ class Mokuyu
      * 事务回滚
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function rollback()
     {
@@ -1406,9 +1396,8 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2020-01-07
      * @Author   mokuyu
-     *
-     * @param  [type]   $datas [description]
-     * @return [type]
+     * @param    [type]   $datas [description]
+     * @return   [type]
      */
     public function save($datas)
     {
@@ -1422,10 +1411,12 @@ class Mokuyu
                 unset($datas[$pk]);
 
                 return $this->where($map)->update($datas);
-            } else {
+            }
+            else {
                 return $this->update($datas);
             }
-        } else {
+        }
+        else {
             return $this->update($datas);
         }
     }
@@ -1451,10 +1442,76 @@ class Mokuyu
     }
 
     /**
+     * @param int         $nums     遍历块大小
+     * @param Closure     $callback 回调处理函数
+     * @param string|null $field    以哪列排序
+     * @param string|asc  $sort     asc|desc
+     * @return bool
+     */
+    public function chunk(int $nums = 10, Closure $callback, string $field = null, string $sort = 'asc')
+    {
+        $sort = strtolower($sort);
+        if ($field === null) {
+            $field = $this->getPK();
+        }
+        $this->limit($nums);
+        $this->order($field . ' ' . $sort);
+        $temBak = [
+            'queryParams'  => $this->queryParams,
+            'bindParam'    => $this->bindParam,
+            'temFieldMode' => $this->temFieldMode,
+            'temTableMode' => $this->temTableMode,
+            'fieldMap'     => $this->fieldMap,
+        ];
+        while ($list = $this->select()) {
+            if (false === call_user_func($callback, $list)) {
+                return false;
+            }
+            $end    = end($list);
+            $lastId = $end[$field];
+            foreach ($temBak as $key->$value) {
+                $this->$key = $value;
+            }
+            $this->where([$field . '[' . ($sort == 'asc' ? '>' : '<') . ']' => $lastId]);
+        }
+        return true;
+
+    }
+
+    /**
+     * @param string      $field 返回的列,如果为*则返回数据,参数$key为null时跟select一样
+     * @param string|null $key   索引key,做为数组的索引
+     * @return array
+     */
+    public function column(string $field, string $key = null)
+    {
+        if ($field != '*') {
+            if ($key === null) {
+                $this->field($field);
+            }
+            else {
+                $this->field($field . ',' . $key);
+            }
+        }
+        $list = $this->select();
+        if ($key === null) {
+            return $field == '*' ? $list : array_column($list, $field);
+        }
+        else {
+            $relist = [];
+            foreach ($list as $key => $value) {
+                $relist[$value[$key]] = $field == '*' ? $value : $value[$field];
+            }
+            return $relist;
+        }
+
+
+    }
+
+    /**
      * 修改绑定的参数
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     *
      * @param array $value [description]
      */
     public function setBindParam(array $value): void
@@ -1466,7 +1523,6 @@ class Mokuyu
      * 设置缓存对象
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     *
      * @param CacheInterface $obj [description]
      */
     public function setCache(CacheInterface $obj): void
@@ -1511,9 +1567,8 @@ class Mokuyu
      * 使用回调执行一个事务
      * @DateTime 2019-08-19
      * @Author   mokuyu
-     *
-     * @param  \Closure $callback [description]
-     * @return [type]
+     * @param \Closure $callback [description]
+     * @return   [type]
      */
     public function transaction(Closure $callback)
     {
@@ -1530,10 +1585,10 @@ class Mokuyu
             throw $e;
         }
 
-        // If we catch an exception, we will roll back so nothing gets messed
-        // up in the database. Then we'll re-throw the exception so it can
-        // be handled how the developer sees fit for their applications.
-         catch (Exception $e) {
+            // If we catch an exception, we will roll back so nothing gets messed
+            // up in the database. Then we'll re-throw the exception so it can
+            // be handled how the developer sees fit for their applications.
+        catch (Exception $e) {
             $this->pdoWrite->rollBack();
             throw $e;
         }
@@ -1546,9 +1601,8 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2020-01-07
      * @Author   mokuyu
-     *
-     * @param  array    $data [description]
-     * @return [type]
+     * @param array $data [description]
+     * @return   [type]
      */
     public function update(array $datas)
     {
@@ -1571,13 +1625,16 @@ class Mokuyu
                     // $this->where([$pk => $datas[0][$pk]]);
                     // unset($datas[0][$pk]); //删除对主键的设置':bindparam_' . trim($key, ':');
                     $whereStr = ' WHERE ' . $this->yinhao . $pk . $this->yinhao . ' = :bindparam_' . $pk;
-                } else {
+                }
+                else {
                     return 0;
                 }
-            } else {
+            }
+            else {
                 return 0;
             }
-        } elseif ($isMulData) {
+        }
+        elseif ($isMulData) {
             return 0;
         }
         $this->buildSqlConf();
@@ -1594,7 +1651,8 @@ class Mokuyu
                 if ($pk && $info['field'] == $pk) {
                     if ($isMulData) {
                         $this->bindParam[$index][':bindparam_' . $pk] = $value;
-                    } else {
+                    }
+                    else {
                         $this->bindParam[':bindparam_' . $pk] = $value;
                     }
                     continue;
@@ -1608,7 +1666,8 @@ class Mokuyu
                     if (is_numeric($value)) {
                         $fields[] = $this->joinField($match[1]) . ' = ' . $this->joinField($match[1]) . ' ' . $match[3] . ' ' . $value;
                     }
-                } else {
+                }
+                else {
                     //如果join不为空的话就把字段默认加上第一个表为前缀
                     if ($this->queryParams['join'] && !$info['table']) {
                         $info['table'] = trim($this->queryParams['table'], $this->yinhao);
@@ -1616,25 +1675,29 @@ class Mokuyu
                     $col    = ':' . $info['field'];
                     $column = $this->yinhao . $info['field'] . $this->yinhao;
                     if ($info['table']) {
-                        $col .= '_' . $info['table'];
+                        $col    .= '_' . $info['table'];
                         $column = $this->yinhao . $info['table'] . $this->yinhao . '.' . $column;
                     }
                     if (is_null($value)) {
                         $fields[] = $column . ' = NULL';
-                    } else if (is_object($value) || is_array($value)) {
+                    }
+                    elseif (is_object($value) || is_array($value)) {
                         preg_match("/\(JSON\)\s*([\w]+)/i", $key, $column_match);
                         $this->appendBindParam($col,
                             isset($column_match[0]) ? json_encode($value) : serialize($value)
                             , $index);
 
                         $fields[] = $column . ' = ' . $col;
-                    } else if (is_bool($value)) {
+                    }
+                    elseif (is_bool($value)) {
                         $this->appendBindParam($col, ($value ? '1' : '0'), $index);
                         $fields[] = $column . ' = ' . $col;
-                    } else if (is_integer($value) || is_double($value) || is_string($value)) {
+                    }
+                    elseif (is_integer($value) || is_double($value) || is_string($value)) {
                         $this->appendBindParam($col, $value, $index);
                         $fields[] = $column . ' = ' . $col;
-                    } else {
+                    }
+                    else {
                         $this->appendBindParam($col, $value, $index);
                         $fields[] = $column . ' = ' . $col;
                     }
@@ -1654,8 +1717,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2020-01-06
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     public function useWriteConn()
     {
@@ -1669,13 +1731,15 @@ class Mokuyu
         $_wh = [];
         if (is_Array($data)) {
             $_wh = $data;
-        } else {
+        }
+        else {
             $_wh['_sql'] = '(' . $data . ')';
         }
         if ($_wh) {
             if ($this->queryParams['where']) {
                 $this->queryParams['where'] = array_merge($this->queryParams['where'], $_wh);
-            } else {
+            }
+            else {
                 $this->queryParams['where'] = $_wh;
             }
         }
@@ -1689,7 +1753,8 @@ class Mokuyu
         $_wh = [];
         if (is_Array($data)) {
             $_wh = $data;
-        } else {
+        }
+        else {
             $_wh['_sql'] = '(' . $data . ')';
         }
         if ($_wh) {
@@ -1703,11 +1768,10 @@ class Mokuyu
      * 这个地方传引用进来,防止key出现一样的情况导致冲突,如果一样的话在这个函数里会随机加上一个数字并修改这个key值
      * @DateTime 2019-03-10
      * @Author   mokuyu
-     *
-     * @param  [type]   &$key  引用类型键
-     * @param  [type]   $value 值
-     * @param  [type]   $index 多维数据索引,默认为一维数据
-     * @return [type]
+     * @param    [type]   &$key  引用类型键
+     * @param    [type]   $value 值
+     * @param    [type]   $index 多维数据索引,默认为一维数据
+     * @return   [type]
      */
     protected function appendBindParam(&$key, $value, $index = null): void
     {
@@ -1725,7 +1789,8 @@ class Mokuyu
         }
         if (is_null($index)) {
             $this->bindParam[$key] = $value;
-        } else {
+        }
+        else {
             $this->bindParam[$index][$key] = $value;
         }
 
@@ -1737,7 +1802,8 @@ class Mokuyu
         $rtime = str_pad((round($rtime, 6)) . '', 8, '0');
         if (PHP_SAPI == 'cli') {
             $this->logs[] = '[' . $rtime . 's] ' . $sql;
-        } else {
+        }
+        else {
             $this->logs[] = '【<span ' . $class . '>' . $rtime . 's</span>】' . $sql;
         }
     }
@@ -1829,7 +1895,8 @@ class Mokuyu
                                 $newarr[] = $this->joinField($value, false);
                             }
                             $relation = 'USING (' . implode(',', $newarr) . ')';
-                        } else {
+                        }
+                        else {
                             //关联数组形式
                             $joins = [];
                             foreach ($relation as $key => $value) {
@@ -1869,7 +1936,8 @@ class Mokuyu
             $type  = $this->databaseType;
             if ($type == 'mysql') {
                 $order = ' RAND() ';
-            } else if ($type == 'msssql') {
+            }
+            elseif ($type == 'msssql') {
                 $order = ' NEWID() ';
             }
             $this->queryParams['order'] = ' ORDER BY' . $order;
@@ -1911,9 +1979,8 @@ class Mokuyu
      * 构建一个pdo对象,代码来自medoo
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     *
-     * @param  array    $options [description]
-     * @return [type]
+     * @param array $options [description]
+     * @return   [type]
      */
     protected function buildPDO(array $options): PDO
     {
@@ -1952,7 +2019,8 @@ class Mokuyu
                 case 'mysql':
                     if ($this->socket) {
                         $dsn = $type . ':unix_socket=' . $this->socket . ';dbname=' . $this->databaseName;
-                    } else {
+                    }
+                    else {
                         $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
                     }
 
@@ -1969,17 +2037,21 @@ class Mokuyu
                     break;
 
                 case 'oracle':
-                    $dbname = $server ?
-                    '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName :
-                    $this->databaseName;
-// $conn_string = '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))';
+                    $dbname = $server
+                        ?
+                        '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName
+                        :
+                        $this->databaseName;
+                    // $conn_string = '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))';
                     $dsn = 'oci:dbname=' . $dbname . ($this->charset ? ';charset=' . $this->charset : '');
                     break;
 
                 case 'mssql':
-                    $dsn = strstr(PHP_OS, 'WIN') ?
-                    'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName :
-                    'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                    $dsn = strstr(PHP_OS, 'WIN')
+                        ?
+                        'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName
+                        :
+                        'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
 
                     // Keep MSSQL QUOTED_IDENTIFIER is ON for standard quoting
                     $commands[] = 'SET QUOTED_IDENTIFIER ON';
@@ -2102,7 +2174,8 @@ class Mokuyu
             $ts = '';
             if ($key == '_sql') {
                 $ts = '(' . $value . ')';
-            } else {
+            }
+            else {
                 $ts = $this->parseOperator($key, $value);
             }
             $str1 .= empty($str1) ? $ts : (' AND ' . $ts);
@@ -2112,7 +2185,8 @@ class Mokuyu
             $ts = '';
             if ($key == '_sql') {
                 $ts = '(' . $value . ')';
-            } else {
+            }
+            else {
                 $ts = $this->parseOperator(preg_replace('/__\d+/', '', $key), $value);
             }
             $str2 .= empty($str2) ? $ts : (' OR ' . $ts);
@@ -2123,7 +2197,8 @@ class Mokuyu
             $ts = '';
             if ($key == '_sql') {
                 $ts = '(' . $value . ')';
-            } else {
+            }
+            else {
                 $ts = $this->parseOperator($key, $value);
             }
             $str3 .= empty($str3) ? $ts : (' AND ' . $ts);
@@ -2156,10 +2231,9 @@ class Mokuyu
      * 缓存数据库的一些信息,传数据库配置的时候可以把缓存对象传进来,如果没有传的话就默认不用缓存
      * @DateTime 2018-12-08
      * @Author   mokuyu
-     *
-     * @param  [type]   $key   [description]
-     * @param  [type]   $value [description]
-     * @return [type]
+     * @param    [type]   $key   [description]
+     * @param    [type]   $value [description]
+     * @return   [type]
      */
     protected function cacheAction(string $key, $value = null)
     {
@@ -2169,13 +2243,16 @@ class Mokuyu
         }
         if ($this->debug) {
             return null;
-        } else {
+        }
+        else {
             if (is_null($this->cache)) {
                 return null;
-            } else {
+            }
+            else {
                 if (is_null($value)) {
                     return $this->cache->get($key);
-                } else {
+                }
+                else {
                     return $this->cache->set($key, $value);
                 }
 
@@ -2187,10 +2264,9 @@ class Mokuyu
      * 把数组转换成两个值绑定 between  :create_time_1  and   :create_time_2
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     *
-     * @param  string   $column [description]
-     * @param  array    $arr    [description]
-     * @return [type]
+     * @param string $column [description]
+     * @param array  $arr    [description]
+     * @return   [type]
      */
     protected function getArrayParam(string $column, array $arr): string
     {
@@ -2209,10 +2285,9 @@ class Mokuyu
      * 组合sql和绑定参数为正常语句
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     *
-     * @param  string   $sql   [description]
-     * @param  array    $param [description]
-     * @return [type]
+     * @param string $sql   [description]
+     * @param array  $param [description]
+     * @return   [type]
      */
     protected function greateSQL(string $sql, array $param): string
     {
@@ -2231,8 +2306,7 @@ class Mokuyu
      * @authname [权限名字]     0
      * @DateTime 2019-10-05
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     protected function initQueryParams(): void
     {
@@ -2257,7 +2331,7 @@ class Mokuyu
             //强制使用写库来读数据,在一些强一至性的场景下会使用
             'useWriteConn' => false,
         ];
-        $this->bindParam = [];
+        $this->bindParam    = [];
     }
 
     /**
@@ -2274,7 +2348,8 @@ class Mokuyu
         $info = [];
         if (is_array($field)) {
             $info = $field;
-        } else {
+        }
+        else {
             $info = $this->parseFormatField($field);
         }
         //* 不能加引号,不然会报错
@@ -2296,9 +2371,8 @@ class Mokuyu
      * 解析格式化字段为指定类型数组
      * @DateTime 2019-10-03
      * @Author   mokuyu
-     *
-     * @param  [type]   $field [description]
-     * @return [type]
+     * @param    [type]   $field [description]
+     * @return   [type]
      */
     protected function parseFormatField(string $field): array
     {
@@ -2334,14 +2408,15 @@ class Mokuyu
         if (isset($matfun[1])) {
             $arr['field'] || ($arr['field'] = $matfun[2]); //字段
             $arr['func'] = $matfun[1];                     //函数
-                                                           //从原有字符串中把 (user) 换成占位符
-                                                           // $field_str = str_replace($matfun[0], '__ZHANWEIFU__', $field_str);
+            //从原有字符串中把 (user) 换成占位符
+            // $field_str = str_replace($matfun[0], '__ZHANWEIFU__', $field_str);
         }
         //如果匹配的话,填充的数组是一样的
         if (stripos($field, ' as ') !== false) {
             //正则出有as的这种情况
             preg_match('/([a-zA-Z0-9_\-\.\(\)]*)\s*as\s*([a-zA-Z0-9_\-\.\(\)]*)/i', $field, $match);
-        } else {
+        }
+        else {
             //正则出  User.name[nickname] 这种情况
             preg_match('/([a-zA-Z0-9_\-\.\(\)]*)\s*\[([a-zA-Z0-9_\-]*)\]/i', $field, $match);
         }
@@ -2360,7 +2435,8 @@ class Mokuyu
         //按字段模式转换
         if ($this->temFieldMode === 1) {
             $arr['field'] = $thsi->parseName($arr['field']);
-        } else if ($this->temFieldMode === 2) {
+        }
+        elseif ($this->temFieldMode === 2) {
             $arr['field'] = $thsi->parseName($arr['field'], 3);
         }
 
@@ -2371,16 +2447,16 @@ class Mokuyu
      * 驼峰和下划线命名互转
      * @DateTime 2019-10-06
      * @Author   mokuyu
-     *
-     * @param  [type]   $name [description]
-     * @param  integer  $type 1:user_group，2:userGroup，3:UserGroup
-     * @return [type]
+     * @param    [type]   $name [description]
+     * @param integer $type 1:user_group，2:userGroup，3:UserGroup
+     * @return   [type]
      */
     protected function parseName(string $name, int $type = 1): string
     {
         if ($type === 1) {
             return strtolower(preg_replace('/([A-Z])/', '_$1', lcfirst($name)));
-        } else {
+        }
+        else {
             $name = str_replace('_', '', ucwords($name, '_'));
 
             return $type === 3 ? $name : lcfirst($name);
@@ -2401,7 +2477,7 @@ class Mokuyu
         $col      = ':' . $info['field'];
         if ($info['table']) {
             $column = $this->yinhao . $info['table'] . $this->yinhao . '.' . $column;
-            $col .= '_' . $info['table'];
+            $col    .= '_' . $info['table'];
         }
         //如果有多表联合的情况,并且字段没有表前缀的话,判断第一个表里如果有这个字段就加上第一个表的前缀
         if ($this->queryParams['join'] && !$info['table']) {
@@ -2416,16 +2492,20 @@ class Mokuyu
             if ($operator == '!') {
                 if (is_null($value)) {
                     $tdata = $column . ' IS NOT NULL';
-                } else if (is_array($value)) {
+                }
+                elseif (is_array($value)) {
                     $repeat = $this->getArrayParam($column, $value);
                     $tdata  = $column . ' NOT IN (' . $repeat . ')';
-                } else if (is_integer($value) || is_double($value)) {
+                }
+                elseif (is_integer($value) || is_double($value)) {
                     $this->appendBindParam($col, $value);
                     $tdata = $column . ' != ' . $col;
-                } else if (is_bool($value)) {
+                }
+                elseif (is_bool($value)) {
                     $this->appendBindParam($col, ($value ? '1' : '0'));
                     $tdata = $column . ' != ' . $col;
-                } else if (is_string($value)) {
+                }
+                elseif (is_string($value)) {
                     $this->appendBindParam($col, $value);
                     $tdata = $column . ' != ' . $col;
                 }
@@ -2443,7 +2523,8 @@ class Mokuyu
                         $this->appendBindParam($col0, $value[0]);
                         $this->appendBindParam($col1, $value[1]);
 
-                    } else {
+                    }
+                    else {
                         $this->appendBindParam($col0, $value[0]);
                         $this->appendBindParam($col1, $value[1]);
                     }
@@ -2458,7 +2539,8 @@ class Mokuyu
                 $val = [];
                 if (is_string($value)) {
                     $val[] = $value;
-                } else {
+                }
+                else {
                     $val = $value;
                 }
                 $tdata = '';
@@ -2470,7 +2552,8 @@ class Mokuyu
                     $this->appendBindParam($tem_col, $va);
                     if ($tdata) {
                         $tdata .= ' OR ' . $column . ($operator === '!~' ? ' NOT' : '') . ' LIKE ' . $tem_col;
-                    } else {
+                    }
+                    else {
                         $tdata = $column . ($operator === '!~' ? ' NOT' : '') . ' LIKE ' . $tem_col;
                     }
                 }
@@ -2484,15 +2567,18 @@ class Mokuyu
 
                 if (is_numeric($value)) {
                     $this->appendBindParam($col, $value);
-                } elseif (strpos($field, '#') === 0) {
+                }
+                elseif (strpos($field, '#') === 0) {
                     $this->appendBindParam($col, $value);
-                } else {
+                }
+                else {
                     $this->appendBindParam($col, $value);
                 }
                 $condition = $column . ' ' . $operator . ' ' . $col;
                 $tdata     = $condition;
             }
-        } else {
+        }
+        else {
             //字段中没有标识符直接使用
             $opArr = [
                 'like' => 'LIKE',
@@ -2512,26 +2598,33 @@ class Mokuyu
                     }
                     $repeat = $this->getArrayParam($column, $val);
                     $tdata  = $column . ' IN (' . $repeat . ')';
-                } else {
+                }
+                else {
                     $this->appendBindParam($col, $val);
                     $tdata = $column . ' ' . $opArr[$tj] . ' ' . $col;
                 }
-            } else {
+            }
+            else {
                 if (is_null($value)) {
                     $tdata = $column . ' IS NULL';
-                } else if (is_array($value)) {
+                }
+                elseif (is_array($value)) {
                     $repeat = $this->getArrayParam($col, $value);
                     $tdata  = $column . ' IN (' . $repeat . ')';
-                } else if (is_integer($value) || is_double($value)) {
+                }
+                elseif (is_integer($value) || is_double($value)) {
                     $this->appendBindParam($col, $value);
                     $tdata = $column . ' = ' . $col;
-                } else if (is_bool($value)) {
+                }
+                elseif (is_bool($value)) {
                     $this->appendBindParam($col, ($value ? '1' : '0'));
                     $tdata = $column . ' = ' . $col;
-                } else if (is_string($value)) {
+                }
+                elseif (is_string($value)) {
                     $this->appendBindParam($col, $value);
                     $tdata = $column . ' = ' . $col;
-                } else {
+                }
+                else {
                     $this->appendBindParam($col, $value);
                     $tdata = $column . ' = ' . $col;
                 }
@@ -2578,17 +2671,18 @@ class Mokuyu
      * @authname [权限名字]     0
      * @DateTime 2019-11-06
      * @Author   mokuyu
-     *
-     * @param  string   $table [description]
-     * @return [type]
+     * @param string $table [description]
+     * @return   [type]
      */
     protected function parseTable(string $table): string
     {
         if ($this->temTableMode === 1) {
             $table = $this->parseName($table, 1);
-        } elseif ($this->temTableMode === 2) {
+        }
+        elseif ($this->temTableMode === 2) {
             $table = $this->parseName($table, 3);
-        } elseif ($this->temTableMode === 3) {
+        }
+        elseif ($this->temTableMode === 3) {
             $table = strtoupper($this->parseName($table, 1));
         }
 
@@ -2599,8 +2693,7 @@ class Mokuyu
      * 显示错误,sql执行出错错误时会调用这里
      * @DateTime 2018-04-24
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     protected function showError(string $str): void
     {
@@ -2611,8 +2704,7 @@ class Mokuyu
      * 汇总函数计算
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     *
-     * @return [type]
+     * @return   [type]
      */
     protected function summary(string $func, array $field)
     {
@@ -2633,7 +2725,8 @@ class Mokuyu
         if (count($field) == 1) {
             if (is_array($field[0])) {
                 $field = $field[0];
-            } else {
+            }
+            else {
                 $field = explode(',', $field[0]);
             }
         }
@@ -2658,7 +2751,8 @@ class Mokuyu
             $sql   = $this->buildSelect();
             $query = $this->query('SELECT ' . implode(',', $field) . ' FROM (' . $sql . ') tem');
             $data  = $query->fetchAll(PDO::FETCH_ASSOC);
-        } else {
+        }
+        else {
             $data = $this->select();
         }
 
@@ -2674,11 +2768,13 @@ class Mokuyu
                 return $data[0][$fie];
                 // return array_sum(array_column($data, $fie));
 
-            } else {
+            }
+            else {
                 //多个字段就返回数组
                 return $data ?: 0;
             }
-        } else {
+        }
+        else {
             return 0;
         }
     }

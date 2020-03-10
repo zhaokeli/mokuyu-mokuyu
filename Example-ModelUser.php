@@ -15,17 +15,20 @@ $db = new \mokuyu\database\Mokuyu([
     // 可选，定义表的前缀
     'prefix'        => 'kl_',
 ]);
+
 /**
  * 测试类
  */
 class User extends \mokuyu\database\Model
 {
-    protected $fieldMap = [
-        //格式为 别名(查询)字段=>数据库真实字段
-        'push_time' => 'create_time',
-    ];
+    protected $fieldMap
+        = [
+            //格式为 别名(查询)字段=>数据库真实字段
+            'push_time' => 'create_time',
+        ];
 
     protected $tableName = 'UserGroup';
 }
+
 $mod = new User($db);
 var_dump($mod);

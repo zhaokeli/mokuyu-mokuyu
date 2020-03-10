@@ -1,6 +1,6 @@
 <?php
-$newdataname = 'newtestdata';
-$databaseSql = <<<eot
+$newdataname  = 'newtestdata';
+$databaseSql  = <<<eot
 CREATE DATABASE IF NOT EXISTS {$newdataname} DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 eot;
 $datatableSql = <<<eot
