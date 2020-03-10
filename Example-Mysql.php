@@ -1,6 +1,6 @@
 <?php
-$newdataname  = 'newtestdata';
-$databaseSql  = <<<eot
+$newdataname = 'newtestdata';
+$databaseSql = <<<eot
 CREATE DATABASE IF NOT EXISTS {$newdataname} DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 eot;
 $datatableSql = <<<eot
@@ -29,14 +29,14 @@ try {
 }
 
 //查询数据库是否存在
-$result = $pdo->exec($databaseSql);
-if (!$result) {
-    die('create database error!');
-}
+// $result = $pdo->exec($databaseSql);
+// if (!$result) {
+//     die('create database error!');
+// }
 
-$pdo->exec("use {$newdataname}");
-$result = $pdo->exec($datatableSql);
-echo 'database success!';
+// $pdo->exec("use {$newdataname}");
+// $result = $pdo->exec($datatableSql);
+// echo 'database success!';
 // die();
 //////////////////////类库使用示例////////////////////////////////////////
 
@@ -59,7 +59,15 @@ $query = new \mokuyu\database\Mokuyu([
 ]);
 // $model = new \ank\database\Model();
 // $query = new \ank\database\Query($conn);
+$titles = $query->table('article')->limit(10)->column('title');
+$titles = $query->table('article')->limit(10)->column('title', 'article_id');
+$titles = $query->table('article')->limit(10)->column('*', 'article_id');
 
+$query->table('article')->chunk(10, function ($list) {
+    var_dump($list);
+
+    return false;
+}, 'views', 'asc');
 //添加数据
 $datanum = 100;
 $datas   = [];

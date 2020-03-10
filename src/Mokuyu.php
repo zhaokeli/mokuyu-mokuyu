@@ -1448,7 +1448,7 @@ class Mokuyu
      * @param string|asc  $sort     asc|desc
      * @return bool
      */
-    public function chunk(int $nums = 10, Closure $callback, string $field = null, string $sort = 'asc')
+    public function chunk(int $nums, Closure $callback, string $field = null, string $sort = 'asc')
     {
         $sort = strtolower($sort);
         if ($field === null) {
@@ -1469,7 +1469,7 @@ class Mokuyu
             }
             $end    = end($list);
             $lastId = $end[$field];
-            foreach ($temBak as $key->$value) {
+            foreach ($temBak as $key => $value) {
                 $this->$key = $value;
             }
             $this->where([$field . '[' . ($sort == 'asc' ? '>' : '<') . ']' => $lastId]);
@@ -1499,7 +1499,7 @@ class Mokuyu
         }
         else {
             $relist = [];
-            foreach ($list as $key => $value) {
+            foreach ($list as $value) {
                 $relist[$value[$key]] = $field == '*' ? $value : $value[$field];
             }
             return $relist;
