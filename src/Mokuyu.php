@@ -1423,7 +1423,7 @@ class Mokuyu
 
     /**
      * 查询数据返回一个二维数组
-     * @return [type] [description]
+     * @return array|bool [type] [description]
      */
     public function select()
     {
@@ -1479,30 +1479,49 @@ class Mokuyu
     }
 
     /**
-     * @param string      $field 返回的列,如果为*则返回数据,参数$key为null时跟select一样
-     * @param string|null $key   索引key,做为数组的索引
+     * @param string      $field    返回的列,如果为*则返回数据,参数$key为null时跟select一样
+     * @param string|null $key      索引key,做为数组的索引
+     * @param bool        $isDelKey 如果有多列数据,是否从数组中删除索引列
      * @return array
      */
-    public function column(string $field, string $key = null)
+    public function column($field, string $key = null, bool $isDelKey = false)
     {
-        if ($field != '*') {
+        if (is_string($field)) {
+            $field = explode(',', $field);
+        }
+        $isSingle = count($field) === 1;
+
+        // 传入字段的情况下
+        if ($field[0] != '*') {
             if ($key === null) {
                 $this->field($field);
             }
             else {
-                $this->field($field . ',' . $key);
+                $field[] = $key;
+                $this->field($field);
             }
         }
         $list = $this->select();
         if ($key === null) {
-            return $field == '*' ? $list : array_column($list, $field);
+            if ($field[0] === '*') {
+                return $list;
+            }
+            if ($isSingle) {
+                return array_column($list, $field[0]);
+            }
+            else {
+                return $list;
+            }
         }
         else {
-            $relist = [];
+            $data = [];
             foreach ($list as $value) {
-                $relist[$value[$key]] = $field == '*' ? $value : $value[$field];
+                $data[$value[$key]] = ($field[0] === '*' || !$isSingle) ? $value : $value[$field[0]];
+                //从数组中删除键
+                if ($isDelKey && is_array($data[$value[$key]]))
+                    unset($data[$value[$key]][$key]);
             }
-            return $relist;
+            return $data;
         }
 
 

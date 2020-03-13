@@ -1,6 +1,6 @@
 <?php
-$newdataname = 'newtestdata';
-$databaseSql = <<<eot
+$newdataname  = 'newtestdata';
+$databaseSql  = <<<eot
 CREATE DATABASE IF NOT EXISTS {$newdataname} DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 eot;
 $datatableSql = <<<eot
@@ -60,7 +60,9 @@ $query = new \mokuyu\database\Mokuyu([
 // $model = new \ank\database\Model();
 // $query = new \ank\database\Query($conn);
 $titles = $query->table('article')->limit(10)->column('title');
+$titles = $query->table('article')->limit(10)->column('title,views');
 $titles = $query->table('article')->limit(10)->column('title', 'article_id');
+$titles = $query->table('article')->limit(10)->column('title,views', 'article_id');
 $titles = $query->table('article')->limit(10)->column('*', 'article_id');
 
 $query->table('article')->chunk(10, function ($list) {
