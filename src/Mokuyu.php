@@ -1629,7 +1629,7 @@ class Mokuyu
         if (empty($this->queryParams['table'])) {
             return 0;
         }
-        if (count($datas) == count($datas, 1)) {
+        if (count($datas) === count($datas, 1)) {
             $datas = [$datas];
         }
         $isMulData = count($datas) > 1 ? true : false;

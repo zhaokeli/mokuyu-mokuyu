@@ -134,14 +134,20 @@ abstract class Model
      * @param array $data
      * @return mixed
      */
-    public function add(array $data)
+    public function add(array $datas)
     {
-        $this->autoData($data);
-        $this->preFieldOnInsert($data);
-        $this->deleteFieldOnInsert($data);
+        if (count($datas) === count($datas, 1)) {
+            $datas = [$datas];
+        }
+        foreach ($datas as $key => $data) {
+            $this->autoData($data);
+            $this->preFieldOnInsert($data);
+            $this->deleteFieldOnInsert($data);
+            $datas[$key] = $data;
+        }
         $this->initQuery();
 
-        return $this->db->add($data);
+        return $this->db->add($datas);
     }
 
     /**
@@ -149,14 +155,20 @@ abstract class Model
      * @param array $data
      * @return mixed
      */
-    public function update(array $data)
+    public function update(array $datas)
     {
-        $this->autoData($data);
-        $this->preFieldOnUpdate($data);
-        $this->deleteFieldOnUpdate($data);
+        if (count($datas) === count($datas, 1)) {
+            $datas = [$datas];
+        }
+        foreach ($datas as $key => $data) {
+            $this->autoData($data);
+            $this->preFieldOnUpdate($data);
+            $this->deleteFieldOnUpdate($data);
+            $datas[$key] = $data;
+        }
         $this->initQuery();
 
-        return $this->db->update($data);
+        return $this->db->update($datas);
     }
 
     /**
