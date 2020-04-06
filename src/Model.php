@@ -131,7 +131,7 @@ abstract class Model
 
     /**
      * 添加数据
-     * @param array $data
+     * @param array $datas
      * @return mixed
      */
     public function add(array $datas)
@@ -152,7 +152,7 @@ abstract class Model
 
     /**
      * 更新数据
-     * @param array $data
+     * @param array $datas
      * @return mixed
      */
     public function update(array $datas)
@@ -173,6 +173,9 @@ abstract class Model
 
     /**
      * 字段数据填充
+     * @param $key
+     * @param $value
+     * @param $data
      */
     protected function parseAutoField($key, $value, &$data)
     {
@@ -256,8 +259,8 @@ abstract class Model
     protected function initQuery()
     {
         $this->db->table($this->tableName);
-        $this->db->tableMode($this->tableMode);
-        $this->db->fieldMode($this->fieldMode);
+        $this->db->tableMode((int)$this->tableMode);
+        $this->db->fieldMode((int)$this->fieldMode);
         $this->db->fieldMap($this->fieldMap);
 
         $params = $this->db->getQueryParams();
