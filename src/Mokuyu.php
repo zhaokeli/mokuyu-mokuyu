@@ -1688,7 +1688,7 @@ class Mokuyu
                     continue;
                 }
                 //字段+ - * / 本字段算术运算
-                preg_match('/([\w]+)(\[([+\-*/])])?/i', $info['field'], $match);
+                preg_match('/([\w]+)(\[(\+|\-|\*|\/)\])?/i', $info['field'], $match);
                 if (isset($match[3])) {
                     if (is_numeric($value)) {
                         $fields[] = $this->joinField($match[1]) . ' = ' . $this->joinField($match[1]) . ' ' . $match[3] . ' ' . $value;
@@ -1910,8 +1910,8 @@ class Mokuyu
             ];
 
             foreach ($data as $sub_table => $relation) {
-                preg_match('/(\[\s*?(<|>|><|<>)\s*?])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
-
+                preg_match('/(\[\s*?(<|>|><|<>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
+                //                preg_match('/(\[\s*?(\<|\>|\>\<|\<\>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
                 if ($match[2] != '' && $match[3] != '') {
                     $joinString    = $join_array[$match[2]];
                     $joinTableName = $this->prefix . $this->parseName($match[3]);
@@ -2417,7 +2417,8 @@ class Mokuyu
             // 'isMap'         => false,
         ];
         //解析字段中 age[>]这一类的标识识,#使用数据库函数
-        if (preg_match('/(#?)([\w().\-]+)(\[\s*?(>|>=|<|<=|!|<>|><|!?~)\s*?])/i', $field, $match)) {
+        //             if (preg_match('/(#?)([\w\(\)\.\-]+)(\[\s*?(\>|\>\=|\<|\<\=|\!|\<\>|\>\<|\!?~)\s*?\])/i', $field, $match)) {
+        if (preg_match('/(#?)([\w().\-]+)(\[\s*?(>|>=|<|<=|!|<>|><|!?~)\s*?\])/i', $field, $match)) {
             $arr['field']         = $match[2];
             $arr['rightOperator'] = $match[4];
         }
@@ -2445,7 +2446,7 @@ class Mokuyu
         }
         else {
             //正则出  User.name[nickname] 这种情况
-            preg_match('/([a-zA-Z0-9_\-.()]*)\s*\[([a-zA-Z0-9_\-]*)]/i', $field, $match);
+            preg_match('/([a-zA-Z0-9_\-.()]*)\s*\[([a-zA-Z0-9_\-]*)\]/i', $field, $match);
         }
         if (isset($match[1], $match[2])) {
             // 符合User.name[nickname]/ as 这两种别名情况
