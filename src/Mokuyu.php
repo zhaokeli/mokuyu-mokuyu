@@ -1753,9 +1753,57 @@ class Mokuyu
         return $this;
     }
 
-    public function where($data, $value = null)
+    /**
+     * where第二个参数映射转换
+     * @param $field
+     * @param $operator
+     * @param $value
+     */
+    protected function operatorMap(&$field, &$operator, &$value)
     {
-        if ($value !== null && is_string($data)) {
+        $operator = strtolower($operator);
+        $map      = [
+            '!'    => '[!]',
+            '~'    => '[~]',
+            '!~'   => '[!~]',
+            '<>'   => '[<>]',
+            '><'   => '[><]',
+            '>'    => '[>]',
+            '>='   => '[>=]',
+            '<'    => '[<]',
+            '<='   => '[<=]',
+            'like' => '[~]',
+            'in'   => '',
+            'gt'   => '[>]',
+            'egt'  => '[>=]',
+            'lt'   => '[<]',
+            'elt'  => '[<=]',
+            'eq'   => '',
+            'neq'  => '[!]',
+        ];
+        if ($operator === 'in' && !is_array($value)) {
+            $value = explode(',', $value);
+        }
+        if (!isset($map[$operator])) {
+            throw new InvalidArgumentException('Operation not exists');
+        }
+        $field = $field . $map[$operator];
+    }
+
+    /**
+     * and查询条件，可多次调用
+     * @param      $data
+     * @param null $value
+     * @param null $value2
+     * @return $this
+     */
+    public function where($data, $value = null, $value2 = null)
+    {
+        if ($value2 !== null) {
+            $this->operatorMap($data, $value, $value2);
+            $data = [$data => $value2];
+        }
+        elseif ($value !== null && is_string($data)) {
             $data = [$data => $value];
         }
         $_wh = [];
@@ -1778,9 +1826,20 @@ class Mokuyu
 
     }
 
-    public function whereOr($data, $value = null)
+    /**
+     * or查询条件,可多次调用
+     * @param      $data
+     * @param null $value
+     * @param null $value2
+     * @return $this
+     */
+    public function whereOr($data, $value = null, $value2 = null)
     {
-        if ($value !== null && is_string($data)) {
+        if ($value2 !== null) {
+            $this->operatorMap($data, $value, $value2);
+            $data = [$data => $value2];
+        }
+        elseif ($value !== null && is_string($data)) {
             $data = [$data => $value];
         }
         $_wh = [];
