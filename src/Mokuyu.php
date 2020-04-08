@@ -379,7 +379,9 @@ class Mokuyu
             return 0;
         }
         if (!$this->queryParams['where'] && $id !== true) {
-            return 0;
+            if ($id === 0) {
+                return 0;
+            }
         }
         if ($id && is_numeric($id)) {
             $pk = $this->getPK();
