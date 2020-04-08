@@ -4,3 +4,4 @@
 /libs/*.log
 /.idea
 /*.log
+/codeCoverage

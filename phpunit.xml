@@ -20,4 +20,7 @@
         <env name="port" value="3306"/>
         <env name="prefix" value="kl_"/>
     </php>
+    <logging>
+        <log type="coverage-html" target="./codeCoverage" charset="UTF-8"/>
+    </logging>
 </phpunit>
