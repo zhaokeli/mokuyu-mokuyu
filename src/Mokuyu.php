@@ -326,7 +326,7 @@ class Mokuyu
      */
     public function clearCache()
     {
-        $this->cache->deleteMultiple(array_keys($this->cacheKeys));
+        $this->cache && $this->cache->deleteMultiple(array_keys($this->cacheKeys));
         $this->cacheKeys = [];
     }
 

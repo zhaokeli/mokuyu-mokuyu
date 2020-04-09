@@ -5,6 +5,27 @@ use mokuyu\database\Mokuyu;
 
 class MysqlTest extends TestCase
 {
+    protected $db = null;
+
+    public function setUp(): void
+    {
+        $this->db = new Mokuyu([
+            // 必须配置项
+            'database_type' => 'mysql',
+            'database_name' => $_ENV['database_name'],
+            'server'        => $_ENV['server'],
+            'username'      => $_ENV['username'],
+            'password'      => $_ENV['password'],
+            'charset'       => 'utf8',
+            // 可选参数
+            'port'          => 3306,
+            'debug_mode'    => false,
+            'table_mode'    => 1,
+            // 可选，定义表的前缀
+            'prefix'        => $_ENV['prefix'],
+        ]);
+    }
+
     public function testGetPdo()
     {
         $pdo = null;
@@ -48,45 +69,20 @@ eot;
         $this->assertEquals(0, $pdo->exec($datatableSql));
     }
 
-    /**
-     * @return Mokuyu
-     */
-    public function testGetConnect()
-    {
-        $db = new Mokuyu([
-            // 必须配置项
-            'database_type' => 'mysql',
-            'database_name' => $_ENV['database_name'],
-            'server'        => $_ENV['server'],
-            'username'      => $_ENV['username'],
-            'password'      => $_ENV['password'],
-            'charset'       => 'utf8',
-            // 可选参数
-            'port'          => 3306,
-            'debug_mode'    => false,
-            'table_mode'    => 1,
-            // 可选，定义表的前缀
-            'prefix'        => $_ENV['prefix'],
-        ]);
-        $this->assertTrue($db instanceof Mokuyu);
-        return $db;
-    }
-
 
     /**
-     * @depends testGetConnect
-     * @param Mokuyu $db
+     * @param
      */
-    public function testAdd(Mokuyu $db)
+    public function testAdd()
     {
         //添加单个
-        $result = $db->abort(false)->table('article')->add([
+        $result = $this->db->abort(false)->table('article')->add([
             'title' => 'this is php data!' . rand(100, 1000),
             'views' => rand(100, 1000),
         ]);
         $this->assertGreaterThan(0, $result);
         //批量添加数据
-        $datanum = 100;
+        $datanum = 200;
         $datas   = [];
         while (--$datanum > 0) {
             $datas[] = [
@@ -94,20 +90,20 @@ eot;
                 'views' => rand(100, 1000),
             ];
         }
-        $result = $db->abort(false)->table('article')->add($datas);
+        $result = $this->db->abort(false)->table('article')->add($datas);
         $this->assertGreaterThan(0, $result);
     }
 
     /**
-     * @depends testGetConnect
-     * @param Mokuyu $db
+     * @param
      */
-    public function testUpdate(Mokuyu $db)
+    public function testUpdate()
     {
         //更新单条数据
-        $this->assertGreaterThan(0, $db->table('article')->update(['article_id' => 1, 'views' => 999999]));
+        $this->assertGreaterThan(0, $this->db->table('article')->update(['article_id' => 1, 'views' => 999999]));
+        $this->assertGreaterThan(0, $this->db->table('article')->save(['article_id' => 1, 'views' => 99999]));
         //测试批量事务更新
-        $this->assertGreaterThan(0, $db->table('article')->update([
+        $this->assertGreaterThan(0, $this->db->table('article')->update([
             [
                 'article_id' => 2,
                 'views'      => rand(10, 99) + 9999,
@@ -124,28 +120,84 @@ eot;
     }
 
     /**
-     * @depends testGetConnect
-     * @param Mokuyu $db
+     * @param
      */
-    public function testDelete(Mokuyu $db)
+    public function testDelete()
     {
-        $this->assertGreaterThan(0, $db->table('article')->delete(100));
-        $this->assertGreaterThan(0, $db->table('article')->where('article_id', 99)->delete());
-        $this->assertGreaterThan(0, $db->table('article')->where('article_id', 'in', [55, 65])->delete());
-        $this->assertGreaterThan(0, $db->table('article')->where(['article_id' => 98])->delete());
-        $this->assertGreaterThan(0, $db->table('article')->where('article_id', '<>', [70, 79])->delete());
+        $this->assertGreaterThan(0, $this->db->table('article')->delete(100));
+        $this->assertGreaterThan(0, $this->db->table('article')->where('article_id', 99)->delete());
+        $this->assertGreaterThan(0, $this->db->table('article')->where('article_id', 'in', [55, 65])->delete());
+        $this->assertGreaterThan(0, $this->db->table('article')->where(['article_id' => 98])->delete());
+        $this->assertGreaterThan(0, $this->db->table('article')->where('article_id', '<>', [70, 79])->delete());
     }
 
     /**
-     * @depends testGetConnect
-     * @param Mokuyu $db
+     * @param
      */
-    public function testSelect(Mokuyu $db)
+    public function testSelect()
     {
-        $this->assertEquals(11, count($db->table('article')->limit(11)->select()));
-        $this->assertEquals(1, count($db->table('article')->where('article_id', 40)->select()));
-        $this->assertEquals(3, count($db->table('article')->where('article_id', 'in', [31, 32, 33])->select()));
-        $this->assertEquals(1, count($db->table('article')->where(['article_id' => 91])->select()));
-        $this->assertEquals(3, count($db->table('article')->where('article_id', '<>', [45, 47])->select()));
+        $this->assertEquals(11, count($this->db->table('article')->limit(11)->select()));
+        $this->assertEquals(1, count($this->db->table('article')->where('article_id', 40)->select()));
+        $this->assertEquals(3, count($this->db->table('article')->where('article_id', 'in', [31, 32, 33])->select()));
+        $this->assertEquals(1, count($this->db->table('article')->where(['article_id' => 91])->select()));
+        $this->assertEquals(3, count($this->db->table('article')->where('article_id', '<>', [45, 47])->select()));
+    }
+
+    public function testHas()
+    {
+        $this->assertTrue($this->db->table('article')->fetchSql(false)->where('article_id', 200)->has());
+    }
+
+    /**
+     * @param
+     */
+    public function testSummary()
+    {
+        $this->assertEquals(199, $this->db->table('Article')->where('article_id', '<>', [198, 200])->avg('article_id'));
+        $this->assertEquals(3, $this->db->table('Article')->where('article_id', '<>', [198, 200])->count());
+        $this->assertEquals(1, $this->db->table('Article')->min('article_id'));
+        $this->assertEquals(200, $this->db->table('Article')->max('article_id'));
+        $this->assertEquals(399, $this->db->table('Article')->where('article_id', '<>', [199, 200])->sum('article_id'));
+        $this->db->table('Article')->order('article_id desc')->rand()->group('views')->get();
+    }
+
+
+    public function testOther()
+    {
+        $this->db->clearCache();
+        $this->assertEquals('article_id', $this->db->table('Article')->getPK());
+        $this->assertGreaterThan(2, count($this->db->table('Article')->getFields()));
+
+
+    }
+
+    public function testTransaction()
+    {
+        try {
+            $this->db->transaction(function () {
+                $this->assertEquals(1, $this->db->table('Article')->where('article_id', 200)->setDec('views'));
+                $this->assertEquals(1, $this->db->table('Article')->where('article_id', 199)->setInc('views'));
+            });
+        } catch (Exception $e) {
+        }
+    }
+
+    public function testColumn()
+    {
+        $this->db->table('Article')->where('article_id', 199)->column('views,title');
+        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('*');
+        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('*', 'article_id');
+        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('article_id');
+        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('views', 'article_id');
+        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('*', 'article_id', true);
+        $this->assertTrue(true);
+    }
+
+    public function testPage()
+    {
+        $this->db->table('Article')->page(2);
+        $this->db->table('Article')->paginate(3);
+        $this->db->table('Article')->field('views,title')->paginate(3);
+        $this->assertTrue(true);
     }
 }
