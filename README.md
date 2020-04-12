@@ -76,7 +76,6 @@
   - [SQLite示例](#sqlite%e7%a4%ba%e4%be%8b)
 
 <!-- /TOC -->
-<!-- /MarkdownTOC -->
 ## 安装方法
 
 ### composer
@@ -278,6 +277,7 @@ $map=[
 * field[<>]=>[100,200] ====  field BETWEEN 100 AND 200
 * field[><]=>[100,200] ====  field NOT BETWEEN 100 AND 200
 * field[~]=>'%stss' ====  field like '%stss'
+* field[~]=>['%stss','stss%'] ====  field like '%stss' OR field like 'stss%'
 * field[>]=>100 ====  field>100
 * field[>]=>100 ====  field>100
 
@@ -324,7 +324,7 @@ where or连接的另一种添加方式
 
 ### join(array data)
 
-```
+``` php
 主表就是使用table设置的表
 // [>] == LEFT JOIN
 // [<] == RIGH JOIN

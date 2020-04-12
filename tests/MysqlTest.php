@@ -125,6 +125,8 @@ eot;
      */
     public function testUpdate()
     {
+        $this->assertEquals(0, $this->db->save([]));
+        $this->assertEquals(0, $this->db->update([]));
         //更新单条数据
         $this->assertGreaterThan(0, $this->db->table('article')->update(['article_id' => 1, 'views' => 999999]));
         $this->assertGreaterThan(0, $this->db->table('article')->save(['article_id' => 1, 'views' => 99999]));
@@ -172,8 +174,23 @@ eot;
      */
     public function testSelect()
     {
+        $this->assertIsString($this->db->table('Article')->fetchSql(true)->whereOr([
+            'title[!]'        => null,
+            'views[!]'        => [1, 2],
+            'create_time[><]' => [100, 200],
+            'update_time[~]'  => ['%10', '20%', '30'],
+            'article_id[~]'   => 1,
+        ])->select());
+        $this->assertEquals(0, $this->db->select());
         $this->assertEquals(11, count($this->db->table('article')->limit(11)->select()));
-        $this->assertEquals(1, count($this->db->table('article')->where('article_id', 40)->select()));
+        //下面会返回41这一行
+        $this->assertEquals(1, count($this->db->table('article')
+                                              ->where('article_id', 40)
+                                              ->where('article_id', '<>', [40, 90])
+                                              ->whereOr('article_id', 41)
+                                              ->whereOr('article_id', '>=', 2)
+                                              ->fetchSql(false)
+                                              ->select()));
         $this->assertEquals(3, count($this->db->table('article')->where('article_id', 'in', [31, 32, 33])->limit('0,3')->select()));
         $this->assertEquals(1, count($this->db->table('article')->where(['article_id' => 91])->select()));
         $this->assertEquals(3, count($this->db->table('article')->where('article_id', '<>', [45, 47])->limit([0, 3])->select()));
@@ -229,6 +246,7 @@ eot;
         $this->db->tableMode();
         $this->assertEquals('article_id', $this->db->table('Article')->getPK());
         $this->assertGreaterThan(2, count($this->db->table('Article')->getFields()));
+        $this->assertCount(2, $this->db->table('article')->field('title as article_title,views[nums]')->getWhere(['id'=>1]));
 
 
     }
@@ -269,5 +287,15 @@ eot;
         $this->assertFalse($this->db->paginate(3));
         $this->db->table('Article')->field('views,title')->paginate(3);
         $this->assertTrue(true);
+    }
+
+    public function testExec()
+    {
+
+    }
+
+    public function testQuery()
+    {
+
     }
 }

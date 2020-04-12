@@ -1436,10 +1436,10 @@ class Mokuyu
      */
     public function select()
     {
-        $this->buildSqlConf();
         if (empty($this->queryParams['table'])) {
             return false;
         }
+        $this->buildSqlConf();
         $sql   = $this->buildSelect();
         $query = $this->query($sql);
         //调试时返回这些
@@ -2628,15 +2628,14 @@ class Mokuyu
                 if (!$value) {
                     return '';
                 }
-                $val = [];
-                if (is_string($value)) {
-                    $val[] = $value;
+                $val = $value;
+                if (!is_array($val)) {
+                    $val = [$val];
                 }
-                else {
-                    $val = $value;
-                }
+                //like条件可以加多个,构成or组合
                 $tdata = '';
                 foreach ($val as $ke => $va) {
+                    $va .= '';
                     if (strpos($va, '%') === false) {
                         $va = $va . '%';
                     }
