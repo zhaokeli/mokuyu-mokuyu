@@ -209,7 +209,6 @@ eot;
 
     public function testHas()
     {
-        $fetchSql = 'SELECT EXISTS(SELECT * FROM "kl_article"   WHERE ("article_id" >= \'200\')   )';
         $this->assertFalse($this->db->fetchSql(false)->where('article_id', '>=', 200)->has());
         $this->assertIsString($this->db->table('Article')->fetchSql(true)->where('article_id', '>=', 200)->has());
         $this->assertTrue($this->db->table('article')->fetchSql(false)->where('article_id', '>=', 200)->has());
@@ -246,7 +245,7 @@ eot;
         $this->db->tableMode();
         $this->assertEquals('article_id', $this->db->table('Article')->getPK());
         $this->assertGreaterThan(2, count($this->db->table('Article')->getFields()));
-        $this->assertCount(2, $this->db->table('article')->field('title as article_title,views[nums]')->getWhere(['id'=>1]));
+        $this->assertCount(2, $this->db->table('article')->field('title as article_title,views[nums]')->getWhere(['id' => 1]));
 
 
     }
