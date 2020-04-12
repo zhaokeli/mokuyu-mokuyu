@@ -5,3 +5,5 @@
 /.idea
 /*.log
 /codeCoverage
+/.phpunit.result.cache
+/*.lock

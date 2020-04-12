@@ -13,14 +13,14 @@
         </whitelist>
     </filter>
     <php>
-        <env name="server" value="127.0.0.1"/>
-        <env name="username" value="root"/>
-        <env name="password" value="adminrootkl"/>
-        <env name="database_name" value="testmokuyu"/>
-        <env name="port" value="3306"/>
-        <env name="prefix" value="kl_"/>
+        <env name="test_server" value="127.0.0.1"/>
+        <env name="test_username" value="root"/>
+        <env name="test_password" value="adminrootkl"/>
+        <env name="test_database_name" value="testmokuyu"/>
+        <env name="test_port" value="3306"/>
+        <env name="test_prefix" value="kl_"/>
     </php>
     <logging>
-        <log type="coverage-html" target="./codeCoverage" charset="UTF-8"/>
+        <log type="coverage-html" target="./codeCoverage"/>
     </logging>
 </phpunit>

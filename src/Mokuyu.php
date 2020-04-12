@@ -1173,11 +1173,11 @@ class Mokuyu
     public function limit($start, $end = null)
     {
         if (is_null($end)) {
-            if (strpos($start . '', ',') !== false) {
-                [$start, $end] = explode(',', $start);
-            }
-            elseif (is_array($start) && count($start) >= 2) {
+            if (is_array($start) && count($start) >= 2) {
                 [$start, $end] = $start;
+            }
+            elseif (strpos($start . '', ',') !== false) {
+                [$start, $end] = explode(',', $start);
             }
             else {
                 $end   = $start;
@@ -1272,6 +1272,7 @@ class Mokuyu
             'temFieldMode' => $this->temFieldMode,
             'temTableMode' => $this->temTableMode,
             'fieldMap'     => $this->fieldMap,
+            'isFetchSql'   => $this->isFetchSql,
         ];
         //统计数量时只需要第一个有效字段做为统计字段
         $temField = $this->queryParams['field'];
@@ -1289,10 +1290,10 @@ class Mokuyu
             $this->$key = $value;
         }
         $this->page($page, $pageSize);
-        $this->buildSqlConf();
         if (empty($this->queryParams['table'])) {
             return false;
         }
+        $this->buildSqlConf();
         $sql   = $this->buildSelect();
         $query = $this->query($sql);
         //调试时返回这些
@@ -1470,6 +1471,7 @@ class Mokuyu
             'temFieldMode' => $this->temFieldMode,
             'temTableMode' => $this->temTableMode,
             'fieldMap'     => $this->fieldMap,
+            'isFetchSql'   => $this->isFetchSql,
         ];
         while ($list = $this->select()) {
             if (false === call_user_func($callback, $list)) {

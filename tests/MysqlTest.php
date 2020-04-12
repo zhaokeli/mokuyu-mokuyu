@@ -1,7 +1,10 @@
 <?php
 
+namespace tests;
+
 use PHPUnit\Framework\TestCase;
 use mokuyu\database\Mokuyu;
+use PDO;
 
 class MysqlTest extends TestCase
 {
@@ -12,28 +15,29 @@ class MysqlTest extends TestCase
         $this->db = new Mokuyu([
             // 必须配置项
             'database_type' => 'mysql',
-            'database_name' => $_ENV['database_name'],
-            'server'        => $_ENV['server'],
-            'username'      => $_ENV['username'],
-            'password'      => $_ENV['password'],
+            'database_name' => $_ENV['test_database_name'],
+            'server'        => $_ENV['test_server'],
+            'username'      => $_ENV['test_username'],
+            'password'      => $_ENV['test_password'],
             'charset'       => 'utf8',
             // 可选参数
             'port'          => 3306,
             'debug_mode'    => false,
             'table_mode'    => 1,
             // 可选，定义表的前缀
-            'prefix'        => $_ENV['prefix'],
+            'prefix'        => $_ENV['test_prefix'],
         ]);
+        $this->initDatabase();
     }
 
-    public function testGetPdo()
+    public function getPdo()
     {
         $pdo = null;
         try {
             $pdo = new PDO(
-                'mysql:host=' . $_ENV['server'] . ';port=' . $_ENV['port'] . ';',
-                $_ENV['username'],
-                $_ENV['password'],
+                'mysql:host=' . $_ENV['test_server'] . ';port=' . $_ENV['test_port'] . ';',
+                $_ENV['test_username'],
+                $_ENV['test_password'],
                 [
                     PDO::ATTR_CASE => PDO::CASE_NATURAL,
                 ]
@@ -46,27 +50,59 @@ class MysqlTest extends TestCase
         return $pdo;
     }
 
-    /**
-     * @depends testGetPdo
-     * @param \PDO $pdo
-     */
-    public function testCreateDatabase(PDO $pdo)
+
+    public function initDatabase()
     {
-        $sql = 'CREATE DATABASE IF NOT EXISTS ' . $_ENV['database_name'] . ' DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;';
+        $pdo = $this->getPdo();
+        $sql = 'CREATE DATABASE IF NOT EXISTS ' . $_ENV['test_database_name'] . ' DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;';
         $pdo->exec($sql);
         $datatableSql = <<<eot
 DROP TABLE IF EXISTS `kl_article`;
 CREATE TABLE `kl_article` (
   `article_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL DEFAULT '',
+  `category_id` int(11) NOT NULL DEFAULT '0' COMMENT '分类id',
   `views` int(11) NOT NULL DEFAULT '0' COMMENT '浏览次数',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`article_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+DROP TABLE IF EXISTS `kl_category`;
+CREATE TABLE `kl_category` (
+  `category_id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL DEFAULT '' COMMENT '标题',
+  PRIMARY KEY (`category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+DROP TABLE IF EXISTS `kl_nokey`;
+CREATE TABLE `kl_nokey` (
+  `test_title` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 eot;
-        $pdo->exec('use ' . $_ENV['database_name']);;
-        $this->assertEquals(0, $pdo->exec($datatableSql));
+        $pdo->exec('use ' . $_ENV['test_database_name']);;
+        $pdo->exec($datatableSql);
+        //批量添加数据
+        $datanum = 200;
+        $datas   = [];
+        while (--$datanum >= 0) {
+            $datas[] = [
+                'title'       => 'this is php data!' . rand(100, 1000),
+                'category_id' => rand(1, 3),
+                'views'       => rand(100, 1000),
+            ];
+        }
+        $result = $this->db->abort(false)->table('article')->add($datas);
+        $this->assertGreaterThan(0, $result);
+        $result = $this->db->abort(false)->table('Category')->add([
+            [
+                'title' => '软件下载',
+            ],
+            [
+                'title' => '电影',
+            ],
+            [
+                'title' => '小说',
+            ],
+        ]);
     }
 
 
@@ -81,17 +117,7 @@ eot;
             'views' => rand(100, 1000),
         ]);
         $this->assertGreaterThan(0, $result);
-        //批量添加数据
-        $datanum = 200;
-        $datas   = [];
-        while (--$datanum > 0) {
-            $datas[] = [
-                'title' => 'this is php data!' . rand(100, 1000),
-                'views' => rand(100, 1000),
-            ];
-        }
-        $result = $this->db->abort(false)->table('article')->add($datas);
-        $this->assertGreaterThan(0, $result);
+
     }
 
     /**
@@ -124,11 +150,21 @@ eot;
      */
     public function testDelete()
     {
+        $this->assertEquals(0, $this->db->delete());
+        $this->assertEquals(0, $this->db->table('Nokey')->delete(1));
+        $this->assertEquals(0, $this->db->delete(100));
+        $this->assertEquals(0, $this->db->table('article')->delete());
         $this->assertGreaterThan(0, $this->db->table('article')->delete(100));
         $this->assertGreaterThan(0, $this->db->table('article')->where('article_id', 99)->delete());
         $this->assertGreaterThan(0, $this->db->table('article')->where('article_id', 'in', [55, 65])->delete());
         $this->assertGreaterThan(0, $this->db->table('article')->where(['article_id' => 98])->delete());
         $this->assertGreaterThan(0, $this->db->table('article')->where('article_id', '<>', [70, 79])->delete());
+        $this->assertGreaterThan(0, $this->db->table('article')
+                                             ->where('article_id', '<>', [70, 79])
+                                             ->join([
+                                                 '[>]category' => ['category_id'],
+                                             ])
+                                             ->delete());
     }
 
     /**
@@ -138,14 +174,28 @@ eot;
     {
         $this->assertEquals(11, count($this->db->table('article')->limit(11)->select()));
         $this->assertEquals(1, count($this->db->table('article')->where('article_id', 40)->select()));
-        $this->assertEquals(3, count($this->db->table('article')->where('article_id', 'in', [31, 32, 33])->select()));
+        $this->assertEquals(3, count($this->db->table('article')->where('article_id', 'in', [31, 32, 33])->limit('0,3')->select()));
         $this->assertEquals(1, count($this->db->table('article')->where(['article_id' => 91])->select()));
-        $this->assertEquals(3, count($this->db->table('article')->where('article_id', '<>', [45, 47])->select()));
+        $this->assertEquals(3, count($this->db->table('article')->where('article_id', '<>', [45, 47])->limit([0, 3])->select()));
+    }
+
+    public function testGet()
+    {
+        $this->assertFalse($this->db->get());
+        $this->assertGreaterThan(0, $this->db->table('article')->field('article.views as nums')->get());
+        $this->assertEquals(11, count($this->db->table('article')->limit(11)->select()));
+        $this->assertCount(2, $this->db->table('article')->field('title as article_title,views[nums]')->get());
+        $this->assertArrayHasKey('nums', $this->db->table('article')->field('article.title,views as nums')->get());
+        $this->assertGreaterThan(0, $this->db->table('article')->field('article.views')->get(155));
+        $this->assertIsString($this->db->table('article')->fetchSql(true)->field('article.views')->get());
     }
 
     public function testHas()
     {
-        $this->assertTrue($this->db->table('article')->fetchSql(false)->where('article_id', 200)->has());
+        $fetchSql = 'SELECT EXISTS(SELECT * FROM "kl_article"   WHERE ("article_id" >= \'200\')   )';
+        $this->assertFalse($this->db->fetchSql(false)->where('article_id', '>=', 200)->has());
+        $this->assertIsString($this->db->table('Article')->fetchSql(true)->where('article_id', '>=', 200)->has());
+        $this->assertTrue($this->db->table('article')->fetchSql(false)->where('article_id', '>=', 200)->has());
     }
 
     /**
@@ -161,14 +211,32 @@ eot;
         $this->db->table('Article')->order('article_id desc')->rand()->group('views')->get();
     }
 
+    public function testDebug()
+    {
+        $this->db->debug(false);
+        $this->assertFalse($this->db->debug());
+    }
 
     public function testOther()
     {
         $this->db->clearCache();
+        $this->db->getLastError();
+        $this->db->getLastSql();
+        $this->assertInstanceOf(PDO::class, $this->db->getPDO());
+        $this->db->error();
+        $this->db->log();
+        $this->db->fieldMode();
+        $this->db->tableMode();
         $this->assertEquals('article_id', $this->db->table('Article')->getPK());
         $this->assertGreaterThan(2, count($this->db->table('Article')->getFields()));
 
 
+    }
+
+    public function testFieldOperation()
+    {
+        $this->db->table('Article')->fieldOperation('views', 1, '&');
+        $this->db->fieldOperation('views', 1, '*');
     }
 
     public function testTransaction()
@@ -195,8 +263,10 @@ eot;
 
     public function testPage()
     {
+        $this->assertIsString($this->db->table('Article')->fetchSql(true)->paginate(3));
         $this->db->table('Article')->page(2);
         $this->db->table('Article')->paginate(3);
+        $this->assertFalse($this->db->paginate(3));
         $this->db->table('Article')->field('views,title')->paginate(3);
         $this->assertTrue(true);
     }
