@@ -369,7 +369,7 @@ class Mokuyu
      * @authname [name]      0
      * @DateTime 2020-02-17
      * @Author   mokuyu
-     * @param int|integer $id 可以为bool true删除所有数据,如果为int则为主键id
+     * @param int $id 可以为bool true删除所有数据,如果为int则为主键id
      * @return bool|false|int|string [type]
      */
     public function delete($id = 0)
@@ -500,7 +500,7 @@ class Mokuyu
      * @authname [name]       0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param bool|boolean $bo [description]
+     * @param bool $bo [description]
      * @return Mokuyu [type]
      */
     public function fetchSql(bool $bo = true)
@@ -554,9 +554,9 @@ class Mokuyu
      * 对指定字段进行运算更新
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     * @param string      $field     [description]
-     * @param int|integer $num       [description]
-     * @param string      $operation [description]
+     * @param string $field     [description]
+     * @param int    $num       [description]
+     * @param string $operation [description]
      * @return bool|false|int|string [type]
      */
     public function fieldOperation(string $field, int $num = 0, string $operation = '+')
@@ -798,7 +798,7 @@ class Mokuyu
      * @authname [权限名字]       0
      * @DateTime 2019-12-11
      * @Author   mokuyu
-     * @param bool|boolean $isWrite 返回的对象为读or写,默认为读连接
+     * @param bool $isWrite 返回的对象为读or写,默认为读连接
      * @return PDO [type]
      */
     public function getPDO(bool $isWrite = false): PDO
@@ -1092,7 +1092,7 @@ class Mokuyu
         if (count($datas) == count($datas, 1)) {
             $datas = [$datas];
         }
-        $isMulData = count($datas) > 1 ? true : false;
+        $isMulData = count($datas) > 1;
         //取表的所有字段
         $table_fields = $this->getFields();
         $index        = $isMulData ? 0 : null;
@@ -1177,7 +1177,7 @@ class Mokuyu
                 [$start, $end] = $start;
             }
             elseif (strpos($start . '', ',') !== false) {
-                [$start, $end] = explode(',', $start);
+                [$start, $end] = explode(',', (string)$start);
             }
             else {
                 $end   = $start;
@@ -1260,8 +1260,8 @@ class Mokuyu
      * @authname [name]      0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param int         $page
-     * @param int|integer $pageSize 分页大小
+     * @param int $page
+     * @param int $pageSize 分页大小
      * @return array|bool [list=>[],count=>100]
      */
     public function paginate(int $page = 1, int $pageSize = 15)
@@ -1643,7 +1643,7 @@ class Mokuyu
         if (count($datas) === count($datas, 1)) {
             $datas = [$datas];
         }
-        $isMulData = count($datas) > 1 ? true : false;
+        $isMulData = count($datas) > 1;
         $index     = $isMulData ? 0 : null;
 
         $whereStr = '';
