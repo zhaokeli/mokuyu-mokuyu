@@ -1405,7 +1405,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2020-01-07
      * @Author   mokuyu
-     * @param    [type]   $datas [description]
+     * @param    [type]   $datas
      * @return bool|false|int|string [type]
      */
     public function save($datas)
@@ -1413,16 +1413,16 @@ class Mokuyu
         if (empty($this->queryParams['table'])) {
             return 0;
         }
+        //如果条件为空,则查找是不是含有主键,有主键则更新,没有则插入
         if (empty($this->queryParams['where'])) {
             $pk = $this->getPK();
             if ($pk && isset($datas[$pk])) {
                 $map = [$pk => $datas[$pk]];
                 unset($datas[$pk]);
-
                 return $this->where($map)->update($datas);
             }
             else {
-                return $this->update($datas);
+                return $this->insert($datas);
             }
         }
         else {
@@ -1625,6 +1625,7 @@ class Mokuyu
 
         return $result;
     }
+
 
     /**
      * 更新数据
