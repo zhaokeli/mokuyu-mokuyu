@@ -50,7 +50,9 @@ abstract class Model
     protected $field = [];
 
     /**
-     * 字段映射,可以隐藏数据库真实字段
+     * 字段映射
+     * 格式为 别名(查询)字段=>数据库真实字段
+     * 场景：文章表中字段为create_time,但想使用add_time去查询,做映射后就可以使用add_time查询,不映射则会提示add_time不存在
      * @var array
      */
     protected $fieldMap
@@ -60,8 +62,8 @@ abstract class Model
         ];
 
     /**
-     * 字段风格,把传入的字段转为下面，此转换不受字段映射的影响,不管是真实字段还是映射字段都会转换
-     * 0:默认字段，1:转换为下划线风格，2:转换为驼峰风格
+     * 设置当前数据表字段风格,传入的字段会转为此种风格后再去查询,fieldMap中设置的(别名/真实)字段同样会被转换
+     * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
      * @var null
      */
     protected $fieldMode = 0;
@@ -104,6 +106,12 @@ abstract class Model
      */
     protected $tableMode = 1;
 
+    /**
+     * 追加字段/属性
+     * @var array
+     */
+    protected $append = [];
+
     public function __construct(Mokuyu $db, $tableName = null)
     {
         if ($tableName !== null) {
@@ -117,17 +125,42 @@ abstract class Model
 
     public function __call(string $method, array $params)
     {
-        if (in_array(strtolower($method), ['select', 'has', 'get', 'add', 'update', 'delete', 'fieldoperation', 'setInc', 'setDec', 'max', 'min', 'avg', 'count', 'sum'])) {
+        $method = strtolower($method);
+        if (in_array($method, ['select', 'has', 'get', 'add', 'update', 'delete', 'fieldoperation', 'setInc', 'setDec', 'max', 'min', 'avg', 'count', 'sum'])) {
             $this->initQuery();
         }
         $result = call_user_func_array([$this->db, $method], $params);
         if ($result instanceof Mokuyu) {
             return $this;
         }
-
+        //追加字段
+        if (in_array($method, ['select', 'get'])) {
+            $this->parseAppendField($result);
+        }
         return $result;
     }
 
+    /**
+     * 解析追加的字段
+     * @param $datas
+     */
+    protected function parseAppendField(&$datas)
+    {
+        $isMul = count($datas) !== count($datas, true);
+        if (!$isMul) {
+            $datas = [$datas];
+        }
+        foreach ($datas as $key => $data) {
+            foreach ($this->append as $field) {
+                $funcName = 'get' . str_replace('_', '', $field) . 'Attr';
+                if (is_callable([$this, $funcName])) {
+                    $data[$key][$field] = $this->$funcName($data);
+                }
+            }
+        }
+
+
+    }
 
     /**
      * 添加数据
