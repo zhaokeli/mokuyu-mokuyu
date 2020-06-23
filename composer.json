@@ -10,7 +10,8 @@
   ],
   "autoload": {
     "psr-4": {
-      "mokuyu\\database\\": "src"
+      "mokuyu\\database\\": "src",
+      "mokuyu\\tests\\": "tests"
     }
   },
   "require": {

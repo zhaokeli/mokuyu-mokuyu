@@ -146,7 +146,10 @@ abstract class Model
      */
     protected function parseAppendField(&$datas)
     {
-        $isMul = count($datas) !== count($datas, true);
+        if (!is_array($datas)) {
+            return;
+        }
+        $isMul = count($datas) !== count($datas, 1);
         if (!$isMul) {
             $datas = [$datas];
         }
@@ -154,9 +157,12 @@ abstract class Model
             foreach ($this->append as $field) {
                 $funcName = 'get' . str_replace('_', '', $field) . 'Attr';
                 if (is_callable([$this, $funcName])) {
-                    $data[$key][$field] = $this->$funcName($data);
+                    $datas[$key][$field] = $this->$funcName($data);
                 }
             }
+        }
+        if (!$isMul) {
+            $datas = $datas[0];
         }
 
 

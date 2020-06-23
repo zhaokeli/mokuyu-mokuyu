@@ -1,9 +1,8 @@
 <?php
 
-namespace tests;
+namespace mokuyu\tests;
 
 use PHPUnit\Framework\TestCase;
-use mokuyu\database\Mokuyu;
 use PDO;
 
 class MysqlTest extends TestCase
@@ -12,97 +11,7 @@ class MysqlTest extends TestCase
 
     public function setUp(): void
     {
-        $this->db = new Mokuyu([
-            // 必须配置项
-            'database_type' => 'mysql',
-            'database_name' => $_ENV['test_database_name'],
-            'server'        => $_ENV['test_server'],
-            'username'      => $_ENV['test_username'],
-            'password'      => $_ENV['test_password'],
-            'charset'       => 'utf8',
-            // 可选参数
-            'port'          => 3306,
-            'debug_mode'    => false,
-            'table_mode'    => 1,
-            // 可选，定义表的前缀
-            'prefix'        => $_ENV['test_prefix'],
-        ]);
-        $this->initDatabase();
-    }
-
-    public function getPdo()
-    {
-        $pdo = null;
-        try {
-            $pdo = new PDO(
-                'mysql:host=' . $_ENV['test_server'] . ';port=' . $_ENV['test_port'] . ';',
-                $_ENV['test_username'],
-                $_ENV['test_password'],
-                [
-                    PDO::ATTR_CASE => PDO::CASE_NATURAL,
-                ]
-            );
-        } catch (PDOException $e) {
-            $this->assertTrue($pdo instanceof PDO);
-            return null;
-        }
-        $this->assertTrue($pdo instanceof PDO);
-        return $pdo;
-    }
-
-
-    public function initDatabase()
-    {
-        $pdo = $this->getPdo();
-        $sql = 'CREATE DATABASE IF NOT EXISTS ' . $_ENV['test_database_name'] . ' DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;';
-        $pdo->exec($sql);
-        $datatableSql = <<<eot
-DROP TABLE IF EXISTS `kl_article`;
-CREATE TABLE `kl_article` (
-  `article_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `title` varchar(255) NOT NULL DEFAULT '',
-  `category_id` int(11) NOT NULL DEFAULT '0' COMMENT '分类id',
-  `views` int(11) NOT NULL DEFAULT '0' COMMENT '浏览次数',
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`article_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-DROP TABLE IF EXISTS `kl_category`;
-CREATE TABLE `kl_category` (
-  `category_id` int(11) NOT NULL AUTO_INCREMENT,
-  `title` varchar(255) NOT NULL DEFAULT '' COMMENT '标题',
-  PRIMARY KEY (`category_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-DROP TABLE IF EXISTS `kl_nokey`;
-CREATE TABLE `kl_nokey` (
-  `test_title` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-eot;
-        $pdo->exec('use ' . $_ENV['test_database_name']);;
-        $pdo->exec($datatableSql);
-        //批量添加数据
-        $datanum = 200;
-        $datas   = [];
-        while (--$datanum >= 0) {
-            $datas[] = [
-                'title'       => 'this is php data!' . rand(100, 1000),
-                'category_id' => rand(1, 3),
-                'views'       => rand(100, 1000),
-            ];
-        }
-        $result = $this->db->abort(false)->table('article')->add($datas);
-        $this->assertGreaterThan(0, $result);
-        $result = $this->db->abort(false)->table('Category')->add([
-            [
-                'title' => '软件下载',
-            ],
-            [
-                'title' => '电影',
-            ],
-            [
-                'title' => '小说',
-            ],
-        ]);
+        $this->db = InitTestDb::getDb();
     }
 
 
@@ -222,7 +131,7 @@ eot;
         $this->assertEquals(199, $this->db->table('Article')->where('article_id', '<>', [198, 200])->avg('article_id'));
         $this->assertEquals(3, $this->db->table('Article')->where('article_id', '<>', [198, 200])->count());
         $this->assertEquals(1, $this->db->table('Article')->min('article_id'));
-        $this->assertEquals(200, $this->db->table('Article')->max('article_id'));
+        $this->assertEquals(201, $this->db->table('Article')->max('article_id'));
         $this->assertEquals(399, $this->db->table('Article')->where('article_id', '<>', [199, 200])->sum('article_id'));
         $this->db->table('Article')->order('article_id desc')->rand()->group('views')->get();
     }
@@ -254,6 +163,7 @@ eot;
     {
         $this->db->table('Article')->fieldOperation('views', 1, '&');
         $this->db->fieldOperation('views', 1, '*');
+        $this->assertEquals(1, 1);
     }
 
     public function testTransaction()
@@ -288,13 +198,4 @@ eot;
         $this->assertTrue(true);
     }
 
-    public function testExec()
-    {
-
-    }
-
-    public function testQuery()
-    {
-
-    }
 }
