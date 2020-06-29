@@ -8,8 +8,13 @@ namespace mokuyu\database;
  */
 abstract class Model
 {
+    protected const ACTION_INSERT = 0;
+    protected const ACTION_UPDATE = 1;
     /**
      * 添加或更新时自动处理的字段，如果是键值对,则值就是这个字段的值，否则自动使用本类 set[Field]Attr 方法返回值来设置这个字段
+     * 添加时不管数据中有没有此字段都会使用本类成员函数解析处理
+     * 更新时如果更新数据中有此字段才会处理,没有的话会直接忽略
+     * 下面插入和更新自动处理规则跟这里一样
      * @var array
      */
     protected $auto = [];
@@ -27,13 +32,13 @@ abstract class Model
     protected $update = [];
 
     /**
-     * 在插入数据前删除指定字段
+     * 在插入数据前拦截并删除指定字段
      * @var array
      */
     protected $beforeInsertDelete = [];
 
     /**
-     * 在更新前删除指定字段
+     * 在更新前拦截并删除指定字段
      * @var array
      */
     protected $beforeUpdateDelete = [];
@@ -179,7 +184,7 @@ abstract class Model
             $datas = [$datas];
         }
         foreach ($datas as $key => $data) {
-            $this->autoData($data);
+            $this->autoData($data, self::ACTION_INSERT);
             $this->preFieldOnInsert($data);
             $this->deleteFieldOnInsert($data);
             $datas[$key] = $data;
@@ -200,7 +205,7 @@ abstract class Model
             $datas = [$datas];
         }
         foreach ($datas as $key => $data) {
-            $this->autoData($data);
+            $this->autoData($data, self::ACTION_UPDATE);
             $this->preFieldOnUpdate($data);
             $this->deleteFieldOnUpdate($data);
             $datas[$key] = $data;
@@ -216,32 +221,39 @@ abstract class Model
      * @param $value
      * @param $data
      */
-    protected function parseAutoField($key, $value, &$data)
+    protected function parseAutoField($key, $value, &$data, $action = null)
     {
+        //如果键是数字则使用模型方法解析出值
         if (is_numeric($key)) {
+            //如果是更新操作,并且更新数据里没有此字段的话,忽略本次处理
+            if ($action === self::ACTION_UPDATE && !isset($data[$value])) {
+                return;
+            }
             $funcName = 'set' . str_replace('_', '', $value) . 'Attr';
             if (is_callable([$this, $funcName])) {
-                $da = '';
-                if (isset($data[$value])) {
-                    $da = $data[$value];
-                }
-                $data[$value] = $this->$funcName($da);
+                $data[$value] = $this->$funcName($data[$value] ?? null);
             }
         }
         else {
+            //如果是更新操作,并且更新数据里没有此字段的话,忽略本次处理
+            if ($action === self::ACTION_UPDATE && !isset($data[$key])) {
+                return;
+            }
+            //如果键是字段名字,则直接使用值设置
             $data[$key] = $value;
         }
     }
 
     /**
-     * 添加或更新数据时自动插入字段(字段不存在的话)
-     * @param $data
+     * 添加或更新数据时自动插入字段
+     * @param      $data
+     * @param null $action
      */
-    protected function autoData(&$data)
+    protected function autoData(&$data, $action = null)
     {
         //因为php方法名字不区分大小写，所以这里可以直接把_替换掉使用
         foreach ($this->auto as $key => $value) {
-            $this->parseAutoField($key, $value, $data);
+            $this->parseAutoField($key, $value, $data, $action);
         }
     }
 
@@ -272,26 +284,26 @@ abstract class Model
     }
 
     /**
-     * 在插入数据时插入指定字段(不存在的字段)
-     * @param $data
+     * 在插入数据时插入指定字段
+     * @param      $data
      */
     protected function preFieldOnInsert(&$data)
     {
         //因为php方法名字不区分大小写，所以这里可以直接把_替换掉使用
         foreach ($this->insert as $key => $value) {
-            $this->parseAutoField($key, $value, $data);
+            $this->parseAutoField($key, $value, $data, self::ACTION_INSERT);
         }
     }
 
     /**
-     * 在更新数据时插入指定字段(不存在的字段)
+     * 在更新数据时插入指定字段
      * @param $data
      */
     protected function preFieldOnUpdate(&$data)
     {
         //因为php方法名字不区分大小写，所以这里可以直接把_替换掉使用
         foreach ($this->update as $key => $value) {
-            $this->parseAutoField($key, $value, $data);
+            $this->parseAutoField($key, $value, $data, self::ACTION_UPDATE);
         }
     }
 
