@@ -2859,7 +2859,7 @@ class Mokuyu
                 $info = $this->parseFormatField($field[0]);
                 $fie  = $info['alias'] ?: $info['field'];
 
-                return $data[0][$fie];
+                return $data[0][$fie] ?: 0;
                 // return array_sum(array_column($data, $fie));
 
             }
