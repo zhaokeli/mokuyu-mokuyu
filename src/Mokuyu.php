@@ -1321,6 +1321,7 @@ class Mokuyu
     public function query(string $sql, array $param = [])
     {
         try {
+            //如果直接传sql语句来执行,没有设置table的话此值为true,直接返回数据,否则返回一个PDOStatement请求对象
             $isReturnData = false;
             if ($param) {
                 $this->setBindParam($param);
