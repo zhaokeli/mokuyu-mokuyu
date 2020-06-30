@@ -76,6 +76,7 @@ class Mokuyu
     /**
      * 字段映射
      * 格式为 别名(查询)字段=>数据库真实字段
+     * 场景：文章表中字段为create_time,但想使用add_time去查询,做映射后就可以使用add_time查询,不映射则会提示add_time不存在
      * @var [type]
      */
     protected $fieldMap
@@ -85,7 +86,7 @@ class Mokuyu
         ];
 
     /**
-     * 字段风格,把传入的字段转为下面
+     * 设置当前数据表字段风格,传入的字段会转为此种风格后再去查询,fieldMap中设置的(别名/真实)字段同样会被转换
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
      * @var null
      */
@@ -369,7 +370,7 @@ class Mokuyu
      * @authname [name]      0
      * @DateTime 2020-02-17
      * @Author   mokuyu
-     * @param int|integer $id 可以为bool true删除所有数据,如果为int则为主键id
+     * @param int $id 可以为bool true删除所有数据,如果为int则为主键id
      * @return bool|false|int|string [type]
      */
     public function delete($id = 0)
@@ -500,7 +501,7 @@ class Mokuyu
      * @authname [name]       0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param bool|boolean $bo [description]
+     * @param bool $bo [description]
      * @return Mokuyu [type]
      */
     public function fetchSql(bool $bo = true)
@@ -554,9 +555,9 @@ class Mokuyu
      * 对指定字段进行运算更新
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     * @param string      $field     [description]
-     * @param int|integer $num       [description]
-     * @param string      $operation [description]
+     * @param string $field     [description]
+     * @param int    $num       [description]
+     * @param string $operation [description]
      * @return bool|false|int|string [type]
      */
     public function fieldOperation(string $field, int $num = 0, string $operation = '+')
@@ -798,7 +799,7 @@ class Mokuyu
      * @authname [权限名字]       0
      * @DateTime 2019-12-11
      * @Author   mokuyu
-     * @param bool|boolean $isWrite 返回的对象为读or写,默认为读连接
+     * @param bool $isWrite 返回的对象为读or写,默认为读连接
      * @return PDO [type]
      */
     public function getPDO(bool $isWrite = false): PDO
@@ -1092,7 +1093,7 @@ class Mokuyu
         if (count($datas) == count($datas, 1)) {
             $datas = [$datas];
         }
-        $isMulData = count($datas) > 1 ? true : false;
+        $isMulData = count($datas) > 1;
         //取表的所有字段
         $table_fields = $this->getFields();
         $index        = $isMulData ? 0 : null;
@@ -1177,7 +1178,7 @@ class Mokuyu
                 [$start, $end] = $start;
             }
             elseif (strpos($start . '', ',') !== false) {
-                [$start, $end] = explode(',', $start);
+                [$start, $end] = explode(',', (string)$start);
             }
             else {
                 $end   = $start;
@@ -1260,8 +1261,8 @@ class Mokuyu
      * @authname [name]      0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param int         $page
-     * @param int|integer $pageSize 分页大小
+     * @param int $page
+     * @param int $pageSize 分页大小
      * @return array|bool [list=>[],count=>100]
      */
     public function paginate(int $page = 1, int $pageSize = 15)
@@ -1405,7 +1406,7 @@ class Mokuyu
      * @authname [name]     0
      * @DateTime 2020-01-07
      * @Author   mokuyu
-     * @param    [type]   $datas [description]
+     * @param    [type]   $datas
      * @return bool|false|int|string [type]
      */
     public function save($datas)
@@ -1413,16 +1414,16 @@ class Mokuyu
         if (empty($this->queryParams['table'])) {
             return 0;
         }
+        //如果条件为空,则查找是不是含有主键,有主键则更新,没有则插入
         if (empty($this->queryParams['where'])) {
             $pk = $this->getPK();
             if ($pk && isset($datas[$pk])) {
                 $map = [$pk => $datas[$pk]];
                 unset($datas[$pk]);
-
                 return $this->where($map)->update($datas);
             }
             else {
-                return $this->update($datas);
+                return $this->insert($datas);
             }
         }
         else {
@@ -1626,6 +1627,7 @@ class Mokuyu
         return $result;
     }
 
+
     /**
      * 更新数据
      * @authname [name]     0
@@ -1643,7 +1645,7 @@ class Mokuyu
         if (count($datas) === count($datas, 1)) {
             $datas = [$datas];
         }
-        $isMulData = count($datas) > 1 ? true : false;
+        $isMulData = count($datas) > 1;
         $index     = $isMulData ? 0 : null;
 
         $whereStr = '';
