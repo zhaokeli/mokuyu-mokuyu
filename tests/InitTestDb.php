@@ -1,6 +1,6 @@
 <?php
 
-namespace mokuyu\tests;
+namespace mokuyu\database\tests;
 
 use PDOException;
 use mokuyu\database\Mokuyu;

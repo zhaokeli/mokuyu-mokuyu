@@ -1,6 +1,6 @@
 <?php
 
-namespace mokuyu\tests;
+namespace mokuyu\database\tests;
 
 use PHPUnit\Framework\TestCase;
 use PDO;

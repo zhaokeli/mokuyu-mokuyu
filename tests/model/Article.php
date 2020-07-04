@@ -1,7 +1,7 @@
 <?php
 
 
-namespace mokuyu\tests\model;
+namespace mokuyu\database\tests\model;
 
 
 use mokuyu\database\Model;

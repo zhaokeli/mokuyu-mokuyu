@@ -1,9 +1,9 @@
 <?php
 
-namespace mokuyu\tests;
+namespace mokuyu\database\tests;
 
 use PHPUnit\Framework\TestCase;
-use mokuyu\tests\model\Article;
+use mokuyu\database\tests\model\Article;
 
 class ModelTest extends TestCase
 {
