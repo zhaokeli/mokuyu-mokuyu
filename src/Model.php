@@ -3,8 +3,65 @@ declare (strict_types = 1);
 
 namespace mokuyu\database;
 
+use Closure;
+use Psr\SimpleCache\CacheInterface;
+
 /**
  * 模型类,实例化一次进行一次查询
+ * @method static abort(bool $isAbort = true)
+ * @method static avg(...$field)
+ * @method static beginTransaction()
+ * @method static chunk(int $nums, Closure $callback, string $field = null, string $sort = 'asc')
+ * @method static clearCache()
+ * @method static column($field, string $key = null, bool $isDelKey = false)
+ * @method static commit()
+ * @method static count(string $field = '*')
+ * @method static debug($debug = null)
+ * @method static delete($id = 0)
+ * @method static error()
+ * @method static exec(string $sql, array $param = [])
+ * @method static fetchSql(bool $bo = true)
+ * @method static field($field)
+ * @method static fieldMap(array $map)
+ * @method static fieldMode(int $type = 0)
+ * @method static fieldOperation(string $field, int $num = 0, string $operation = '+')
+ * @method static forceIndex(string $field)
+ * @method static get(int $id = 0)
+ * @method static getFields(): array
+ * @method static getLastError()
+ * @method static getLastSql()
+ * @method static getPDO(bool $isWrite = false): PDO
+ * @method static getPK()
+ * @method static getQueryParams(): array
+ * @method static getWhere(array $data = []): array
+ * @method static group(string $data)
+ * @method static has()
+ * @method static info()
+ * @method static insert(array $datas)
+ * @method static join(array $data)
+ * @method static limit($start, $end = null)
+ * @method static log()
+ * @method static max(...$field)
+ * @method static min(...$field)
+ * @method static order($data)
+ * @method static page(int $page = 1, int $pageSize = 15)
+ * @method static paginate(int $page = 1, int $pageSize = 15)
+ * @method static query(string $sql, array $param = [])
+ * @method static rand()
+ * @method static rollback()
+ * @method static save($datas)
+ * @method static select()
+ * @method static setBindParam(array $value): void
+ * @method static setCache(CacheInterface $obj): void
+ * @method static setDec(string $field, int $num = 1)
+ * @method static setInc(string $field, int $num = 1)
+ * @method static sum(...$field)
+ * @method static table(string $name)
+ * @method static tableMode(int $type = 0)
+ * @method static transaction(Closure $callback)
+ * @method static useWriteConn()
+ * @method static where($data, $value = null, $value2 = null)
+ * @method static whereOr($data, $value = null, $value2 = null)
  */
 abstract class Model
 {
