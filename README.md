@@ -1,19 +1,19 @@
 # Mokuyu数据库操作
 <!-- TOC -->
 
-- [Mokuyu数据库操作](#mokuyu%e6%95%b0%e6%8d%ae%e5%ba%93%e6%93%8d%e4%bd%9c)
-  - [安装方法](#%e5%ae%89%e8%a3%85%e6%96%b9%e6%b3%95)
+- [Mokuyu数据库操作](#mokuyu数据库操作)
+  - [安装方法](#安装方法)
     - [composer](#composer)
-    - [手动安装](#%e6%89%8b%e5%8a%a8%e5%ae%89%e8%a3%85)
-  - [使用规则说明](#%e4%bd%bf%e7%94%a8%e8%a7%84%e5%88%99%e8%af%b4%e6%98%8e)
-    - [数据库表/字段](#%e6%95%b0%e6%8d%ae%e5%ba%93%e8%a1%a8%e5%ad%97%e6%ae%b5)
-    - [特别注意/解析规则](#%e7%89%b9%e5%88%ab%e6%b3%a8%e6%84%8f%e8%a7%a3%e6%9e%90%e8%a7%84%e5%88%99)
-    - [功能亮点和要求](#%e5%8a%9f%e8%83%bd%e4%ba%ae%e7%82%b9%e5%92%8c%e8%a6%81%e6%b1%82)
-  - [连接数据库](#%e8%bf%9e%e6%8e%a5%e6%95%b0%e6%8d%ae%e5%ba%93)
-    - [连接mysql](#%e8%bf%9e%e6%8e%a5mysql)
-    - [连接pgsql](#%e8%bf%9e%e6%8e%a5pgsql)
-    - [连接sqlite](#%e8%bf%9e%e6%8e%a5sqlite)
-  - [查询条件连贯操作](#%e6%9f%a5%e8%af%a2%e6%9d%a1%e4%bb%b6%e8%bf%9e%e8%b4%af%e6%93%8d%e4%bd%9c)
+    - [手动安装](#手动安装)
+  - [使用规则说明](#使用规则说明)
+    - [数据库表/字段](#数据库表字段)
+    - [特别注意/解析规则](#特别注意解析规则)
+    - [功能亮点和要求](#功能亮点和要求)
+  - [连接数据库](#连接数据库)
+    - [连接mysql](#连接mysql)
+    - [连接pgsql](#连接pgsql)
+    - [连接sqlite](#连接sqlite)
+  - [查询条件连贯操作](#查询条件连贯操作)
     - [fieldMap(array map)](#fieldmaparray-map)
     - [fieldMode(int type=0)](#fieldmodeint-type0)
     - [tableMode(int type=0)](#tablemodeint-type0)
@@ -28,7 +28,7 @@
     - [group(string data)](#groupstring-data)
     - [page(int page=1,int pageSize=15)](#pageint-page1int-pagesize15)
     - [join(array data)](#joinarray-data)
-  - [执行查询并返回结果](#%e6%89%a7%e8%a1%8c%e6%9f%a5%e8%af%a2%e5%b9%b6%e8%bf%94%e5%9b%9e%e7%bb%93%e6%9e%9c)
+  - [执行查询并返回结果](#执行查询并返回结果)
     - [select():array](#selectarray)
     - [insert(array datas):int](#insertarray-datasint)
     - [update(array datas):int](#updatearray-datasint)
@@ -42,26 +42,26 @@
     - [avg(...string field):int/array](#avgstring-fieldintarray)
     - [sum(...string field):int/array](#sumstring-fieldintarray)
     - [count(string field):int](#countstring-fieldint)
-  - [其它信息获取](#%e5%85%b6%e5%ae%83%e4%bf%a1%e6%81%af%e8%8e%b7%e5%8f%96)
+  - [其它信息获取](#其它信息获取)
     - [getPK():string](#getpkstring)
     - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
     - [getQueryParams():array](#getqueryparamsarray)
     - [getFields():array](#getfieldsarray)
-  - [执行原生SQL](#%e6%89%a7%e8%a1%8c%e5%8e%9f%e7%94%9fsql)
+  - [执行原生SQL](#执行原生sql)
     - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
     - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
-  - [数据的增删改](#%e6%95%b0%e6%8d%ae%e7%9a%84%e5%a2%9e%e5%88%a0%e6%94%b9)
-    - [添加数据](#%e6%b7%bb%e5%8a%a0%e6%95%b0%e6%8d%ae)
-    - [更新数据](#%e6%9b%b4%e6%96%b0%e6%95%b0%e6%8d%ae)
-    - [删除数据](#%e5%88%a0%e9%99%a4%e6%95%b0%e6%8d%ae)
-  - [字段操作](#%e5%ad%97%e6%ae%b5%e6%93%8d%e4%bd%9c)
+  - [数据的增删改](#数据的增删改)
+    - [添加数据](#添加数据)
+    - [更新数据](#更新数据)
+    - [删除数据](#删除数据)
+  - [字段操作](#字段操作)
     - [setInc(string fiela,int num=1):int](#setincstring-fielaint-num1int)
     - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
     - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
-  - [事务处理](#%e4%ba%8b%e5%8a%a1%e5%a4%84%e7%90%86)
+  - [事务处理](#事务处理)
     - [beginTransaction()](#begintransaction)
     - [transaction(Closure callback)](#transactionclosure-callback)
-  - [调试](#%e8%b0%83%e8%af%95)
+  - [调试](#调试)
     - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
     - [debug(isDebug=null)](#debugisdebugnull)
     - [abort(bool isAbort=true)](#abortbool-isaborttrue)
@@ -69,11 +69,11 @@
     - [getLastError():string](#getlasterrorstring)
     - [log():array](#logarray)
     - [info():array](#infoarray)
-  - [其它功能](#%e5%85%b6%e5%ae%83%e5%8a%9f%e8%83%bd)
+  - [其它功能](#其它功能)
     - [setCache(CacheInterface obj): void](#setcachecacheinterface-obj-void)
     - [setBindParam(array value): void](#setbindparamarray-value-void)
     - [getWhere(array data = []):array](#getwherearray-data--array)
-  - [SQLite示例](#sqlite%e7%a4%ba%e4%be%8b)
+  - [SQLite示例](#sqlite示例)
 
 <!-- /TOC -->
 ## 安装方法
@@ -265,6 +265,14 @@ $map=[
   'create_time[>]'=>1502365987
 ];
 //sql: (user_id=1 and user_name='use') and (nickname='joke' or nickname='keli' or nickname='keli2' or logintimes<10)  and create_time>1502365987
+```
+
+数组中添加原生sql
+
+``` php
+$map['_sql']='find_in_set(1,`tags`)';
+//或数组形式添加多个
+$map['_sql']=['find_in_set(1,`tags`)','find_in_set(1,`tags`)'];
 ```
 
 查询条件有两种方式添加

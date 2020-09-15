@@ -2268,7 +2268,13 @@ class Mokuyu
         $str1 = '';
         foreach ($anddata as $key => $value) {
             if ($key == '_sql') {
-                $ts = '(' . $value . ')';
+                if (is_array($value)) {
+                    $ts = '((' . implode(') AND (', $value) . '))';
+                }
+                else {
+                    $ts = '(' . $value . ')';
+                }
+
             }
             else {
                 $ts = $this->parseOperator($key, $value);
@@ -2278,7 +2284,12 @@ class Mokuyu
         $str2 = '';
         foreach ($ordata as $key => $value) {
             if ($key == '_sql') {
-                $ts = '(' . $value . ')';
+                if (is_array($value)) {
+                    $ts = '((' . implode(') AND (', $value) . '))';
+                }
+                else {
+                    $ts = '(' . $value . ')';
+                }
             }
             else {
                 $ts = $this->parseOperator(preg_replace('/__\d+/', '', $key), $value);
@@ -2289,7 +2300,12 @@ class Mokuyu
         foreach ($data as $key => $value) {
             // $ts = $this->parseOperator($key, $value);
             if ($key == '_sql') {
-                $ts = '(' . $value . ')';
+                if (is_array($value)) {
+                    $ts = '((' . implode(') AND (', $value) . '))';
+                }
+                else {
+                    $ts = '(' . $value . ')';
+                }
             }
             else {
                 $ts = $this->parseOperator($key, $value);
@@ -2807,7 +2823,13 @@ class Mokuyu
     {
         //如果之前通过field方法传过字段就设置上去，*为默认,排除
         if ($this->queryParams['field'] && $this->queryParams['field'] !== '*') {
-            $field = explode(',', $this->queryParams['field']);
+            if (is_string($this->queryParams['field'])) {
+                $field = explode(',', $this->queryParams['field']);
+            }
+            else {
+                $field = $this->queryParams['field'];
+            }
+
         }
         $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
         if (!isset($arr[$func]) || !$this->queryParams['table']) {
