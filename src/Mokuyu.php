@@ -498,7 +498,6 @@ class Mokuyu
 
     /**
      * 此次查询只返回sql语句
-     * @authname [name]       0
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @param bool $bo [description]
@@ -511,6 +510,11 @@ class Mokuyu
         return $this;
     }
 
+    /**
+     * 设置查询字段
+     * @param string|array $field
+     * @return $this
+     */
     public function field($field)
     {
         $this->queryParams['field'] = $field;
@@ -1162,7 +1166,7 @@ class Mokuyu
     /**
      * 解析join组合的布格尼查询语句
      * @param array $data
-     * @return Mokuyu [type] [description]
+     * @return Mokuyu
      */
     public function join(array $data)
     {
@@ -1171,6 +1175,12 @@ class Mokuyu
         return $this;
     }
 
+    /**
+     * 查询分页
+     * @param string|array $start
+     * @param null|int     $end
+     * @return $this
+     */
     public function limit($start, $end = null)
     {
         if (is_null($end)) {
@@ -1235,6 +1245,11 @@ class Mokuyu
         return $this->summary('MIN', $field);
     }
 
+    /**
+     * 排序字段
+     * @param string|array $data
+     * @return $this
+     */
     public function order($data)
     {
         $this->queryParams['order'] = $data;
@@ -1434,7 +1449,7 @@ class Mokuyu
 
     /**
      * 查询数据返回一个二维数组
-     * @return array|bool [type] [description]
+     * @return array|bool
      */
     public function select()
     {
@@ -1799,9 +1814,9 @@ class Mokuyu
 
     /**
      * and查询条件，可多次调用
-     * @param      $data
-     * @param null $value
-     * @param null $value2
+     * @param string|array $data   条件数组
+     * @param null         $value  操作符
+     * @param null         $value2 值
      * @return $this
      */
     public function where($data, $value = null, $value2 = null)
@@ -2466,8 +2481,13 @@ class Mokuyu
         if ($info['table']) {
             $field = $this->yinhao . $info['table'] . $this->yinhao . '.' . $field;
         }
+        //这里可能出现函数嵌套的情况如：COUNT(DISTINCT
         if ($info['func']) {
-            $field = $info['func'] . '(' . $field . ')';
+            $funcs = explode('(', $info['func']);
+            $funcs = array_reverse($funcs);
+            foreach ($funcs as $funcname) {
+                $field = $funcname . '(' . $field . ')';
+            }
         }
         if ($info['alias'] && $isJoinAlias) {
             $field .= ' AS ' . $this->yinhao . $info['alias'] . $this->yinhao;
@@ -2858,7 +2878,13 @@ class Mokuyu
             if ($info['srcTable']) {
                 $fie = $info['srcTable'] . '.' . $fie;
             }
-            $value = $func . '(' . $fie . ') AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
+            if ($info['func']) {
+                $value = $func . '(' . $info['func'] . '(' . $fie . ')' . ')';
+            }
+            else {
+                $value = $func . '(' . $fie . ')';
+            }
+            $value .= ' AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
         });
 
         //重新设置查询字段
