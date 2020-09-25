@@ -5,6 +5,7 @@ namespace mokuyu\database\tests;
 use PDOException;
 use mokuyu\database\Mokuyu;
 use PDO;
+use mokuyu\Cache;
 
 class InitTestDb
 {
@@ -30,6 +31,26 @@ class InitTestDb
                 // 可选，定义表的前缀
                 'prefix'        => $_ENV['test_prefix'],
             ]);
+            self::$instance->setCache(new Cache([
+                // 缓存类型为File
+                'type'     => 'redis', //目前支持file和memcache redis
+                'memcache' => [
+                    'host' => 'localhost',
+                    'port' => 11211,
+                ],
+                'redis'    => [
+                    'host'     => '127.0.0.1',
+                    'port'     => 6379,
+                    'index'    => 7,
+                    'password' => 'adminrootkl',
+                ],
+                // 全局缓存有效期（0为永久有效）
+                'expire'   => 24 * 3600,
+                // 缓存前缀
+                'prefix'   => 'mokuyu_db',
+                // 缓存目录
+                'path'     => '/datacache',
+            ]));
             self::initDatabase();
         }
         return self::$instance;

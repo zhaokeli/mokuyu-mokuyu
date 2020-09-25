@@ -100,16 +100,16 @@ class MysqlTest extends TestCase
                                               ->whereOr('article_id', '>=', 2)
                                               ->fetchSql(false)
                                               ->select()));
-        $this->assertEquals(3, count($this->db->table('article')->where('article_id', 'in', [31, 32, 33])->limit('0,3')->select()));
-        $this->assertEquals(1, count($this->db->table('article')->where(['article_id' => 91])->select()));
-        $this->assertEquals(3, count($this->db->table('article')->where('article_id', '<>', [45, 47])->limit([0, 3])->select()));
+        $this->assertCount(3, $this->db->table('article')->where('article_id', 'in', [31, 32, 33])->limit('0,3')->select());
+        $this->assertCount(1, $this->db->table('article')->where(['article_id' => 91])->select());
+        $this->assertCount(3, $this->db->table('article')->where('article_id', '<>', [45, 47])->limit([0, 3])->select());
     }
 
     public function testGet()
     {
         $this->assertFalse($this->db->get());
         $this->assertGreaterThan(0, $this->db->table('article')->field('article.views as nums')->get());
-        $this->assertEquals(11, count($this->db->table('article')->limit(11)->select()));
+        $this->assertCount(11, $this->db->table('article')->limit(11)->select());
         $this->assertCount(2, $this->db->table('article')->field('title as article_title,views[nums]')->get());
         $this->assertArrayHasKey('nums', $this->db->table('article')->field('article.title,views as nums')->get());
         $this->assertGreaterThan(0, $this->db->table('article')->field('article.views')->get(155));
@@ -196,6 +196,13 @@ class MysqlTest extends TestCase
         $this->assertFalse($this->db->paginate(3));
         $this->db->table('Article')->field('views,title')->paginate(3);
         $this->assertTrue(true);
+    }
+
+    public function testQueryCache()
+    {
+        $this->db->table('article')->cache(600)->where(['article_id' => 91])->select();
+        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
+        $this->assertEquals(2, $this->db->getCacheHits());
     }
 
 }

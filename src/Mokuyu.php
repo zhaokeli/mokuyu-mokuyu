@@ -74,6 +74,12 @@ class Mokuyu
     protected $errors = [];
 
     /**
+     * 缓存命中多少次
+     * @var int
+     */
+    protected $cacheHits = 0;
+
+    /**
      * 字段映射
      * 格式为 别名(查询)字段=>数据库真实字段
      * 场景：文章表中字段为create_time,但想使用add_time去查询,做映射后就可以使用add_time查询,不映射则会提示add_time不存在
@@ -596,9 +602,9 @@ class Mokuyu
     }
 
     /**
-     * 取数据如果字段是一个的话直接返回这个字段的值，如果是一行记录的话就返回一个数组
+     * 如果字段是一个的话直接返回这个字段的值，如果是一行记录的话就返回一个数组
      * @param int $id
-     * @return bool|mixed|string [type] [description]
+     * @return bool|mixed|string
      */
     public function get(int $id = 0)
     {
@@ -613,45 +619,60 @@ class Mokuyu
             $this->queryParams['where'] = [];
             $this->where([$pk => $id]);
         }
-        $this->buildSqlConf();
-        //处理好后把这个字段保存下来,不然下面执行过后数据会被重置
-        $columns = $this->queryParams['field'];
-        $sql     = $this->buildSelect();
-        $query   = $this->query($sql);
-        if (!($query instanceof PDOStatement)) {
-            return $query ?: '';
-        }
-        //如果列为字符串类型并且不为*
-        $is_single_column = (is_string($columns) && strpos($columns, ',') === false && $columns !== '*');
+        $cacheData = $this->getQueryCache();
+        $data      = null;
+        if ($cacheData === null || $cacheData['data'] === null) {
+            $this->buildSqlConf();
+            //处理好后把这个字段保存下来,不然下面执行过后数据会被重置
+            $columns = $this->queryParams['field'];
+            $sql     = $this->buildSelect();
+            $query   = $this->query($sql);
+            if (!($query instanceof PDOStatement)) {
+                return $query ?: '';
+            }
+            //如果列为字符串类型并且不为*
+            $is_single_column = (is_string($columns) && strpos($columns, ',') === false && $columns !== '*');
 
-        if ($query) {
-            $data = $query->fetchAll(PDO::FETCH_ASSOC);
-            if (isset($data[0])) {
-                if ($is_single_column) {
-                    //这个地方要处理几种情况
-                    if (strpos($columns, ' AS ') !== false) {
-                        //替换掉字段中的引号和 *** as 等字符
-                        $columns = preg_replace(['/' . $this->yinhao . '/', '/.*? AS /'], '', $columns);
-                    }
-                    elseif (preg_match('/^[a-zA-Z0-9_.' . $this->yinhao . ']+$/', $columns, $mat)) {
-                        //判断是不是合法的字段项，如果有表名去掉表名
-                        $columns = preg_replace(['/' . $this->yinhao . '/', '/^[\w]*\./i'], '', $columns);
-                    }
-                    // $columns=str_replace('')
+            if ($query) {
+                $data = $query->fetchAll(PDO::FETCH_ASSOC);
+                if (isset($data[0])) {
+                    if ($is_single_column) {
+                        //这个地方要处理几种情况
+                        if (strpos($columns, ' AS ') !== false) {
+                            //替换掉字段中的引号和 *** as 等字符
+                            $columns = preg_replace(['/' . $this->yinhao . '/', '/.*? AS /'], '', $columns);
+                        }
+                        elseif (preg_match('/^[a-zA-Z0-9_.' . $this->yinhao . ']+$/', $columns, $mat)) {
+                            //判断是不是合法的字段项，如果有表名去掉表名
+                            $columns = preg_replace(['/' . $this->yinhao . '/', '/^[\w]*\./i'], '', $columns);
+                        }
+                        // $columns=str_replace('')
 
-                    return $data[0][$columns];
+                        $data = $data[0][$columns];
+                    }
+                    else {
+                        $data = $data[0];
+                    }
                 }
                 else {
-                    return $data[0];
+                    $data = false;
                 }
             }
             else {
-                return false;
+                $data = false;
             }
+            if ($cacheData !== null) {
+                try {
+                    $this->cache->set($cacheData['key'], $data, $cacheData['expire']);
+                } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+                }
+            }
+
         }
         else {
-            return false;
+            $data = $cacheData['data'];
         }
+        return $data;
     }
 
     /**
@@ -1476,6 +1497,9 @@ class Mokuyu
             }
             $cacheData = $data;
         }
+        else {
+            $cacheData = $cacheData['data'];
+        }
         return $cacheData;
     }
 
@@ -1892,21 +1916,21 @@ class Mokuyu
 
     /**
      * 缓存当前查询
-     * @param int|string $key 缓存key或过期时间,为过期时间时key由系统自动生成
+     * @param string|int $keyOrTime 缓存key或过期时间,为过期时间时key由系统自动生成
      * @param int        $expire
      * @return Mokuyu
      */
-    public function cache($key, int $expire = 10 * 60)
+    public function cache($keyOrTime, int $expire = 10 * 60)
     {
-        if (is_numeric($key)) {
+        if (is_numeric($keyOrTime)) {
             $this->queryParams['queryCache'] = [
                 'key'    => null,
-                'expire' => $key,
+                'expire' => $keyOrTime,
             ];
         }
         else {
             $this->queryParams['queryCache'] = [
-                'key'    => $key,
+                'key'    => $keyOrTime,
                 'expire' => $expire,
             ];
         }
@@ -1934,7 +1958,17 @@ class Mokuyu
         ];
 
         $data['data'] = $this->cache->get($key);
+        $this->cacheHits++;
         return $data;
+    }
+
+    /**
+     * 返回缓存命中次数
+     * @return int
+     */
+    public function getCacheHits(): int
+    {
+        return $this->cacheHits;
     }
 
     /**
