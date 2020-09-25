@@ -33,7 +33,7 @@ class Mokuyu
 
     /**
      * 缓存对象,要实现CacheInterface接口,保存表字段加快速度
-     * @var null
+     * @var CacheInterface
      */
     protected $cache = null;
 
@@ -1456,15 +1456,27 @@ class Mokuyu
         if (empty($this->queryParams['table'])) {
             return false;
         }
-        $this->buildSqlConf();
-        $sql   = $this->buildSelect();
-        $query = $this->query($sql);
-        //调试时返回这些
-        if (!($query instanceof PDOStatement)) {
-            return $query ?: [];
+        $cacheData = $this->getQueryCache();
+        if ($cacheData === null || $cacheData['data'] === null) {
+            $this->buildSqlConf();
+            $sql   = $this->buildSelect();
+            $query = $this->query($sql);
+            //调试时返回这些
+            if (!($query instanceof PDOStatement)) {
+                $data = $query ?: [];
+            }
+            else {
+                $data = $query->fetchAll(PDO::FETCH_ASSOC);
+            }
+            if ($cacheData !== null) {
+                try {
+                    $this->cache->set($cacheData['key'], $data, $cacheData['expire']);
+                } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+                }
+            }
+            $cacheData = $data;
         }
-
-        return $query->fetchAll(PDO::FETCH_ASSOC);
+        return $cacheData;
     }
 
     /**
@@ -1876,6 +1888,53 @@ class Mokuyu
         }
 
         return $this;
+    }
+
+    /**
+     * 缓存当前查询
+     * @param int|string $key 缓存key或过期时间,为过期时间时key由系统自动生成
+     * @param int        $expire
+     * @return Mokuyu
+     */
+    public function cache($key, int $expire = 10 * 60)
+    {
+        if (is_numeric($key)) {
+            $this->queryParams['queryCache'] = [
+                'key'    => null,
+                'expire' => $key,
+            ];
+        }
+        else {
+            $this->queryParams['queryCache'] = [
+                'key'    => $key,
+                'expire' => $expire,
+            ];
+        }
+        return $this;
+    }
+
+    /**
+     * 取查询缓存
+     */
+    protected function getQueryCache()
+    {
+        if ($this->cache === null || $this->queryParams['queryCache'] === null || $this->isFetchSql || $this->isAbort) {
+            return null;
+        }
+        $key    = $this->queryParams['queryCache']['key'] ?? null;
+        $expire = $this->queryParams['queryCache']['expire'] ?? 5 * 60;
+        if ($key === null) {
+            $key = $this->dbConfig['database_name'] . ':' . $this->queryParams['table'] . ':' . md5(json_encode([$this->queryParams, $this->bindParam]));
+            $key = strtolower($key);
+        }
+        $data = [
+            'data'   => null,
+            'key'    => $key,
+            'expire' => $expire,
+        ];
+
+        $data['data'] = $this->cache->get($key);
+        return $data;
     }
 
     /**
@@ -2454,6 +2513,8 @@ class Mokuyu
             'forceIndex'   => '',
             //强制使用写库来读数据,在一些强一至性的场景下会使用
             'useWriteConn' => false,
+            //当前查询缓存
+            'queryCache'   => null,
         ];
         $this->bindParam    = [];
     }
