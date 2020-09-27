@@ -39,27 +39,27 @@ class Mokuyu
 
     /**
      * 数据库数据集
-     * @var [type]
+     * @var string
      */
-    protected $charset;
+    protected $charset = 'utf8';
 
     /**
      * sqlite数据文件
-     * @var [type]
+     * @var string
      */
-    protected $databaseFile;
+    protected $databaseFile = '';
 
     /**
      * 数据库名字
-     * @var [type]
+     * @var string
      */
-    protected $databaseName;
+    protected $databaseName = '';
 
     /**
      * 数据库连接相关信息
-     * @var [type]
+     * @var string
      */
-    protected $databaseType;
+    protected $databaseType = '';
 
     /**
      * 开启调式,关闭后如果有缓存缓存会缓存主键,表字段等信息
@@ -144,21 +144,21 @@ class Mokuyu
 
     /**
      * 数据库密码
-     * @var [type]
+     * @var string
      */
-    protected $password;
+    protected $password = '';
 
     /**
      * 端口
-     * @var [type]
+     * @var int
      */
     protected $port;
 
     /**
      * 数据库前缀
-     * @var [type]
+     * @var string
      */
-    protected $prefix;
+    protected $prefix = '';
 
     /**
      * 每次执行请求的SQL参数组合
@@ -168,12 +168,12 @@ class Mokuyu
 
     /**
      * 数据库连接服务器
-     * @var [type]
+     * @var string
      */
-    protected $server;
+    protected $server = '';
 
     // For SQLite
-    protected $socket;
+    protected $socket = '';
 
     /**
      * 数据表风格,把传入的表名转为下面
@@ -185,9 +185,9 @@ class Mokuyu
 
     /**
      * 用户名
-     * @var [type]
+     * @var string
      */
-    protected $username;
+    protected $username = '';
 
     /**
      * 关键字引号
