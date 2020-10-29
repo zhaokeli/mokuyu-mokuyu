@@ -83,7 +83,7 @@ class Mokuyu
      * 字段映射
      * 格式为 别名(查询)字段=>数据库真实字段
      * 场景：文章表中字段为create_time,但想使用add_time去查询,做映射后就可以使用add_time查询,不映射则会提示add_time不存在
-     * @var [type]
+     * @var
      */
     protected $fieldMap
         = [
@@ -124,7 +124,7 @@ class Mokuyu
 
     /**
      * pdo配置项
-     * @var [type]
+     * @var
      */
     protected $options
         = [
@@ -217,7 +217,7 @@ class Mokuyu
      * 初始化连接
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     * @param array $config [description]
+     * @param array $config
      */
     public function __construct(array $config)
     {
@@ -250,11 +250,10 @@ class Mokuyu
 
     /**
      * 自动初始化连接
-     * @authname [权限名字]     0
      * @DateTime 2019-12-11
      * @Author   mokuyu
-     * @param    [type]   $name [description]
-     * @return PDO [type]
+     * @param       $name
+     * @return PDO
      */
     public function __get($name)
     {
@@ -280,11 +279,10 @@ class Mokuyu
 
     /**
      * 调试查询,程序会中断
-     * @authname [name]       0
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @param bool $isAbort
-     * @return Mokuyu [type]
+     * @return Mokuyu
      */
     public function abort(bool $isAbort = true)
     {
@@ -295,10 +293,9 @@ class Mokuyu
 
     /**
      * 添加数据成功后返回添加成功的id
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param array $datas [description]
+     * @param array $datas
      * @return bool|false|int|mixed|string
      */
     public function add(array $datas)
@@ -307,6 +304,11 @@ class Mokuyu
         return $this->insert($datas);
     }
 
+    /**
+     * 取平均值
+     * @param mixed ...$field
+     * @return array|bool|int|mixed|PDOStatement|string
+     */
     public function avg(...$field)
     {
         return $this->summary('AVG', $field);
@@ -316,7 +318,7 @@ class Mokuyu
      * 开启事务
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     * @return void [type]
+     * @return void
      */
     public function beginTransaction()
     {
@@ -326,14 +328,16 @@ class Mokuyu
 
     /**
      * 清理保存的缓存
-     * @authname [权限名字]     0
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     * @return void [type]
+     * @return void
      */
     public function clearCache()
     {
-        $this->cache && $this->cache->deleteMultiple(array_keys($this->cacheKeys));
+        try {
+            $this->cache && $this->cache->deleteMultiple(array_keys($this->cacheKeys));
+        } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+        }
         $this->cacheKeys = [];
     }
 
@@ -341,13 +345,18 @@ class Mokuyu
      * 提交事务的操作
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     * @return void [type]
+     * @return void
      */
     public function commit()
     {
         $this->pdoWrite->commit();
     }
 
+    /**
+     * 记数
+     * @param string $field
+     * @return array|bool|int|mixed|PDOStatement|string
+     */
     public function count(string $field = '*')
     {
         return $this->summary('COUNT', [$field]);
@@ -355,11 +364,10 @@ class Mokuyu
 
     /**
      * 设置或获取调试状态
-     * @authname [name]     0
      * @DateTime 2020-01-10
      * @Author   mokuyu
-     * @param    [type]   $debug [description]
-     * @return bool|null [type]
+     * @param null $debug
+     * @return bool|null
      */
     public function debug($debug = null)
     {
@@ -373,11 +381,10 @@ class Mokuyu
 
     /**
      * 删除数据
-     * @authname [name]      0
      * @DateTime 2020-02-17
      * @Author   mokuyu
      * @param int $id 可以为bool true删除所有数据,如果为int则为主键id
-     * @return bool|false|int|string [type]
+     * @return bool|false|int|string
      */
     public function delete($id = 0)
     {
@@ -413,10 +420,9 @@ class Mokuyu
 
     /**
      * 返回所有整个错误数组
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @return array [type]
+     * @return array
      */
     public function error()
     {
@@ -429,7 +435,7 @@ class Mokuyu
      * @Author   mokuyu
      * @param string $sql
      * @param array  $param
-     * @return bool|false|int|string [type]
+     * @return bool|false|int|string
      */
     public function exec(string $sql, array $param = [])
     {
@@ -506,8 +512,8 @@ class Mokuyu
      * 此次查询只返回sql语句
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param bool $bo [description]
-     * @return Mokuyu [type]
+     * @param bool $bo
+     * @return Mokuyu
      */
     public function fetchSql(bool $bo = true)
     {
@@ -530,11 +536,10 @@ class Mokuyu
 
     /**
      * 设置字段映射
-     * @authname [权限名字]     0
      * @DateTime 2019-10-16
      * @Author   mokuyu
-     * @param array $map [description]
-     * @return Mokuyu [type]
+     * @param array $map
+     * @return Mokuyu
      */
     public function fieldMap(array $map)
     {
@@ -545,11 +550,10 @@ class Mokuyu
 
     /**
      * 设置字段风格
-     * @authname [权限名字]     0
      * @DateTime 2019-10-16
      * @Author   mokuyu
-     * @param integer $type [description]
-     * @return Mokuyu [type]
+     * @param integer $type
+     * @return Mokuyu
      */
     public function fieldMode(int $type = 0)
     {
@@ -565,10 +569,10 @@ class Mokuyu
      * 对指定字段进行运算更新
      * @DateTime 2019-11-01
      * @Author   mokuyu
-     * @param string $field     [description]
-     * @param int    $num       [description]
-     * @param string $operation [description]
-     * @return bool|false|int|string [type]
+     * @param string $field
+     * @param int    $num
+     * @param string $operation
+     * @return bool|false|int|string
      */
     public function fieldOperation(string $field, int $num = 0, string $operation = '+')
     {
@@ -588,11 +592,10 @@ class Mokuyu
 
     /**
      * 强制使用指定的索引字段
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @param string $field
-     * @return Mokuyu [type]
+     * @return Mokuyu
      */
     public function forceIndex(string $field)
     {
@@ -662,10 +665,7 @@ class Mokuyu
                 $data = false;
             }
             if ($cacheData !== null) {
-                try {
-                    $this->cache->set($cacheData['key'], $data, $cacheData['expire']);
-                } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-                }
+                $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
             }
 
         }
@@ -679,7 +679,7 @@ class Mokuyu
      * 取当前表的所有字段
      * @DateTime 2018-04-27
      * @Author   mokuyu
-     * @return array [type]
+     * @return array
      */
     public function getFields(): array
     {
@@ -797,10 +797,9 @@ class Mokuyu
 
     /**
      * 返回最后一次错误日志
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @return mixed [type]
+     * @return mixed
      */
     public function getLastError()
     {
@@ -809,10 +808,9 @@ class Mokuyu
 
     /**
      * 返回最后一次执行过的sql
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @return mixed [type]
+     * @return mixed
      */
     public function getLastSql()
     {
@@ -821,11 +819,10 @@ class Mokuyu
 
     /**
      * 返回pdo对象,
-     * @authname [权限名字]       0
      * @DateTime 2019-12-11
      * @Author   mokuyu
      * @param bool $isWrite 返回的对象为读or写,默认为读连接
-     * @return PDO [type]
+     * @return PDO
      */
     public function getPDO(bool $isWrite = false): PDO
     {
@@ -834,10 +831,9 @@ class Mokuyu
 
     /**
      * 取当前数据库的主键
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @return mixed|string|null [type]
+     * @return mixed|string|null
      */
     public function getPK()
     {
@@ -995,10 +991,9 @@ class Mokuyu
 
     /**
      * 返回请求的参数
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @return array [type]
+     * @return array
      */
     public function getQueryParams(): array
     {
@@ -1010,7 +1005,7 @@ class Mokuyu
      * @DateTime 2019-10-04
      * @Author   mokuyu
      * @param array $data
-     * @return array [type]
+     * @return array
      */
     public function getWhere(array $data = []): array
     {
@@ -1026,11 +1021,10 @@ class Mokuyu
 
     /**
      * 查询分组
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param string $data [description]
-     * @return Mokuyu [type]
+     * @param string $data
+     * @return Mokuyu
      */
     public function group(string $data)
     {
@@ -1041,7 +1035,6 @@ class Mokuyu
 
     /**
      * 是否有有记录
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @return boolean
@@ -1065,10 +1058,9 @@ class Mokuyu
 
     /**
      * 返回服务器信息
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @return array|null [type]
+     * @return array|null
      */
     public function info()
     {
@@ -1099,11 +1091,10 @@ class Mokuyu
 
     /**
      * add的别名
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param array $datas [description]
-     * @return bool|false|int|mixed|string [type]
+     * @param array $datas
+     * @return bool|false|int|mixed|string
      */
     public function insert(array $datas)
     {
@@ -1256,11 +1247,21 @@ class Mokuyu
         return $this->logs;
     }
 
+    /**
+     * 取最大值
+     * @param mixed ...$field
+     * @return array|bool|int|mixed|PDOStatement|string
+     */
     public function max(...$field)
     {
         return $this->summary('MAX', $field);
     }
 
+    /**
+     * 取最小值
+     * @param mixed ...$field
+     * @return array|bool|int|mixed|PDOStatement|string
+     */
     public function min(...$field)
     {
         return $this->summary('MIN', $field);
@@ -1280,12 +1281,11 @@ class Mokuyu
 
     /**
      * 返回指定分页的记录
-     * @authname [name]     0
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @param int     $page     当前页数
      * @param integer $pageSize 分页大小
-     * @return Mokuyu [type]
+     * @return Mokuyu
      */
     public function page(int $page = 1, int $pageSize = 15)
     {
@@ -1294,7 +1294,6 @@ class Mokuyu
 
     /**
      * 自动分页
-     * @authname [name]      0
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @param int $page
@@ -1352,7 +1351,7 @@ class Mokuyu
      * @Author   mokuyu
      * @param string $sql
      * @param array  $param
-     * @return array|bool|false|PDOStatement|string|null [type]
+     * @return array|bool|PDOStatement|string
      */
     public function query(string $sql, array $param = [])
     {
@@ -1431,7 +1430,7 @@ class Mokuyu
      * 事务回滚
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     * @return void [type]
+     * @return void
      */
     public function rollback()
     {
@@ -1440,11 +1439,10 @@ class Mokuyu
 
     /**
      * 如果数据里有主键则执行更新操作,否则将插入数据
-     * @authname [name]     0
      * @DateTime 2020-01-07
      * @Author   mokuyu
-     * @param    [type]   $datas
-     * @return bool|false|int|string [type]
+     * @param       $datas
+     * @return bool|int|mixed|string
      */
     public function save($datas)
     {
@@ -1490,10 +1488,7 @@ class Mokuyu
                 $data = $query->fetchAll(PDO::FETCH_ASSOC);
             }
             if ($cacheData !== null) {
-                try {
-                    $this->cache->set($cacheData['key'], $data, $cacheData['expire']);
-                } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-                }
+                $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
             }
             $cacheData = $data;
         }
@@ -1594,7 +1589,7 @@ class Mokuyu
      * 修改绑定的参数
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     * @param array $value [description]
+     * @param array $value
      */
     public function setBindParam(array $value): void
     {
@@ -1605,7 +1600,7 @@ class Mokuyu
      * 设置缓存对象
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     * @param CacheInterface $obj [description]
+     * @param CacheInterface $obj
      */
     public function setCache(CacheInterface $obj): void
     {
@@ -1622,6 +1617,11 @@ class Mokuyu
         return $this->fieldOperation($field, $num, '+');
     }
 
+    /**
+     * 求和
+     * @param mixed ...$field
+     * @return array|bool|int|mixed|PDOStatement|string
+     */
     public function sum(...$field)
     {
         return $this->summary('SUM', $field);
@@ -1649,8 +1649,8 @@ class Mokuyu
      * 使用回调执行一个事务
      * @DateTime 2019-08-19
      * @Author   mokuyu
-     * @param Closure $callback [description]
-     * @return mixed [type]
+     * @param Closure $callback
+     * @return mixed
      * @throws Exception
      */
     public function transaction(Closure $callback)
@@ -1682,11 +1682,10 @@ class Mokuyu
 
     /**
      * 更新数据
-     * @authname [name]     0
      * @DateTime 2020-01-07
      * @Author   mokuyu
      * @param array $datas
-     * @return bool|false|int|string [type]
+     * @return bool|false|int|string
      */
     public function update(array $datas)
     {
@@ -1799,10 +1798,9 @@ class Mokuyu
 
     /**
      * 强制使用写pdo在一些强一至性的场景可以使用
-     * @authname [name]     0
      * @DateTime 2020-01-06
      * @Author   mokuyu
-     * @return Mokuyu [type]
+     * @return Mokuyu
      */
     public function useWriteConn()
     {
@@ -1915,7 +1913,7 @@ class Mokuyu
     }
 
     /**
-     * 缓存当前查询
+     * 缓存当前查询,支持get select两个操作
      * @param string|int $keyOrTime 缓存key或过期时间,为过期时间时key由系统自动生成
      * @param int        $expire
      * @return Mokuyu
@@ -1938,7 +1936,7 @@ class Mokuyu
     }
 
     /**
-     * 取查询缓存
+     * 取当前的查询缓存、key、过期时间
      */
     protected function getQueryCache()
     {
@@ -1957,7 +1955,7 @@ class Mokuyu
             'expire' => $expire,
         ];
 
-        $data['data'] = $this->cache->get($key);
+        $data['data'] = $this->cacheAction($key);
         $this->cacheHits++;
         return $data;
     }
@@ -1978,7 +1976,7 @@ class Mokuyu
      * @param      $key
      * @param      $value
      * @param null $index
-     * @return void [type]
+     * @return void
      */
     protected function appendBindParam(&$key, $value, $index = null): void
     {
@@ -2003,6 +2001,12 @@ class Mokuyu
 
     }
 
+    /**
+     * sql请示日志
+     * @param float  $rtime
+     * @param string $sql
+     * @param array  $params
+     */
     protected function appendSqlLogs(float $rtime, string $sql, array $params): void
     {
         $class = $rtime > 1 ? 'style="color:#f00";' : '';
@@ -2186,8 +2190,8 @@ class Mokuyu
      * 构建一个pdo对象,代码来自medoo
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     * @param array $options [description]
-     * @return PDO [type]
+     * @param array $options
+     * @return PDO
      */
     protected function buildPDO(array $options): PDO
     {
@@ -2300,7 +2304,7 @@ class Mokuyu
 
     /**
      * 根据当前配置生成一个select语句
-     * @return string [type] [description]
+     * @return string
      */
     protected function buildSelect(): string
     {
@@ -2351,7 +2355,7 @@ class Mokuyu
 
     /**
      * 解析where条件格式
-     * @return void [type] [description]
+     * @return void
      */
     protected function buildWhere(): void
     {
@@ -2449,31 +2453,30 @@ class Mokuyu
      * @DateTime 2018-12-08
      * @Author   mokuyu
      * @param string $key
-     * @param    [type]   $key   [description]
-     * @return null [type]
+     * @param null   $value
+     * @param int    $expire
+     * @return null
      */
-    protected function cacheAction(string $key, $value = null)
+    protected function cacheAction(string $key, $value = null, int $expire = 3600 * 24)
     {
-        $key = 'mokuyu.' . $key;
-        if (!isset($this->cacheKeys[$key])) {
-            $this->cacheKeys[$key] = true;
-        }
-        if ($this->debug) {
-            return null;
-        }
-        else {
-            if (is_null($this->cache)) {
+        try {
+            $key = 'mokuyu:' . $key;
+            if (!isset($this->cacheKeys[$key])) {
+                $this->cacheKeys[$key] = true;
+            }
+            if ($this->debug || $this->cache === null) {
                 return null;
             }
-            else {
-                if (is_null($value)) {
-                    return $this->cache->get($key);
-                }
-                else {
-                    return $this->cache->set($key, $value);
-                }
 
+            if (is_null($value)) {
+                return $this->cache->get($key);
             }
+            else {
+                return $this->cache->set($key, $value, $expire);
+            }
+
+        } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+            return null;
         }
     }
 
@@ -2481,9 +2484,9 @@ class Mokuyu
      * 把数组转换成两个值绑定 between  :create_time_1  and   :create_time_2
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     * @param string $column [description]
-     * @param array  $arr    [description]
-     * @return string [type]
+     * @param string $column
+     * @param array  $arr
+     * @return string
      */
     protected function getArrayParam(string $column, array $arr): string
     {
@@ -2502,9 +2505,9 @@ class Mokuyu
      * 组合sql和绑定参数为正常语句
      * @DateTime 2019-11-05
      * @Author   mokuyu
-     * @param string $sql   [description]
-     * @param array  $param [description]
-     * @return string [type]
+     * @param string $sql
+     * @param array  $param
+     * @return string
      */
     protected function greateSQL(string $sql, array $param): string
     {
@@ -2520,10 +2523,9 @@ class Mokuyu
 
     /**
      * 重置查询参数
-     * @authname [权限名字]     0
      * @DateTime 2019-10-05
      * @Author   mokuyu
-     * @return void [type]
+     * @return void
      */
     protected function initQueryParams(): void
     {
@@ -2556,9 +2558,9 @@ class Mokuyu
     /**
      * 解析SELECT字段
      * 解析表是不是按指定的格式存储,并且把use.id这样的格式解析成`use`.`id`
-     * @param  [type] $string         [description]
+     * @param      $field
      * @param bool $isJoinAlias
-     * @return string [type] [description]
+     * @return string
      */
     protected function joinField($field, $isJoinAlias = true): string
     {
@@ -2596,7 +2598,7 @@ class Mokuyu
      * @DateTime 2019-10-03
      * @Author   mokuyu
      * @param string $field
-     * @return array [type]
+     * @return array
      */
     protected function parseFormatField(string $field): array
     {
@@ -2674,7 +2676,7 @@ class Mokuyu
      * @Author   mokuyu
      * @param string  $name
      * @param integer $type 1:user_group，2:userGroup，3:UserGroup
-     * @return string [type]
+     * @return string
      */
     protected function parseName(string $name, int $type = 1): string
     {
@@ -2691,8 +2693,8 @@ class Mokuyu
     /**
      * 解析每一个键值对的操作符和值
      * @param string $field
-     * @param  [type] $field          [description]
-     * @return string [type] [description]
+     * @param        $value
+     * @return string
      */
     protected function parseOperator(string $field, $value): string
     {
@@ -2861,8 +2863,8 @@ class Mokuyu
 
     /**
      * 解析传进来的字段字符串或数组
-     * @param  [type] &$columns       [description]
-     * @return string [type] [description]
+     * @param   &$columns
+     * @return string
      */
     protected function parseSelectFields($columns): string
     {
@@ -2893,11 +2895,10 @@ class Mokuyu
 
     /**
      * 按指定风格解析出表名
-     * @authname [权限名字]     0
      * @DateTime 2019-11-06
      * @Author   mokuyu
-     * @param string $table [description]
-     * @return string [type]
+     * @param string $table
+     * @return string
      */
     protected function parseTable(string $table): string
     {
@@ -2919,7 +2920,7 @@ class Mokuyu
      * @DateTime 2018-04-24
      * @Author   mokuyu
      * @param string $str
-     * @return void [type]
+     * @return void
      */
     protected function showError(string $str): void
     {
@@ -2932,7 +2933,7 @@ class Mokuyu
      * @Author   mokuyu
      * @param string $func
      * @param array  $field
-     * @return int|mixed [type]
+     * @return int|mixed
      */
     protected function summary(string $func, array $field)
     {
@@ -2999,30 +3000,28 @@ class Mokuyu
         if (is_string($data) || is_numeric($data)) {
             return $data ?: 0;
         }
-        if ($data) {
-            if (count($field) === 1) {
-                //单个字段的统计直接返回
-                $info = $this->parseFormatField($field[0]);
-                $fie  = $info['alias'] ?: $info['field'];
+        if (!$data) {
+            return 0;
+        }
+        if (count($field) === 1) {
+            //单个字段的统计直接返回
+            $info = $this->parseFormatField($field[0]);
+            $fie  = $info['alias'] ?: $info['field'];
 
-                return $data[0][$fie] ?: 0;
-                // return array_sum(array_column($data, $fie));
+            return $data[0][$fie] ?: 0;
+            // return array_sum(array_column($data, $fie));
 
-            }
-            else {
-                //多个字段就返回数组
-                return $data ?: 0;
-            }
         }
         else {
-            return 0;
+            //多个字段就返回数组
+            return $data ?: 0;
         }
     }
 
     /**
      * 给表添加上前缀
      * @param string $table
-     * @return string [type] [description]
+     * @return string
      */
     protected function tablePrefix(string $table): string
     {

@@ -7,3 +7,5 @@
 /codeCoverage
 /.phpunit.result.cache
 /*.lock
+/phpunit.xml.bak
+/phpunit.xml
