@@ -690,7 +690,7 @@ class Mokuyu
             // $table_name = str_replace($this->yinhao, '', $this->queryParams['srcTable']);
             $table_name = $this->prefix . $this->parseTable($this->queryParams['srcTable']);
             $fieldArr   = [];
-            $ckey       = $this->databaseName . '_' . $table_name . '_fields_';
+            $ckey       = $this->databaseName . ':' . $table_name . ':fields:';
             switch ($this->databaseType) {
                 case 'mysql':
                     $sql      = 'DESC ' . $this->tablePrefix($this->queryParams['srcTable']);
@@ -844,7 +844,7 @@ class Mokuyu
             // $table_name  = str_replace($this->yinhao, '', $this->queryParams['table']);
             $table_name  = $this->prefix . $this->parseTable($this->queryParams['srcTable']);
             $primaryName = '';
-            $ckey        = $this->databaseName . '_' . $table_name . '_primaryid_';
+            $ckey        = $this->databaseName . ':' . $table_name . ':primaryid:';
             switch ($this->databaseType) {
                 case 'mysql':
                     $sql         = 'SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=\'' . $this->databaseName . '\' and TABLE_NAME=\'' . $table_name . '\'';
@@ -1946,7 +1946,7 @@ class Mokuyu
         $key    = $this->queryParams['queryCache']['key'] ?? null;
         $expire = $this->queryParams['queryCache']['expire'] ?? 5 * 60;
         if ($key === null) {
-            $key = $this->dbConfig['database_name'] . ':' . $this->queryParams['table'] . ':' . md5(json_encode([$this->queryParams, $this->bindParam]));
+            $key = $this->dbConfig['database_name'] . ':' . $this->prefix . $this->queryParams['table'] . ':querycache:' . md5(json_encode([$this->queryParams, $this->bindParam]));
             $key = strtolower($key);
         }
         $data = [
