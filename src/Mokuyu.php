@@ -199,7 +199,7 @@ class Mokuyu
      * 开启缓存后保存的缓存key列表
      * @var array
      */
-    private $cacheKeys = [];
+    // private $cacheKeys = [];
 
     /**
      * 字段风格
@@ -334,11 +334,12 @@ class Mokuyu
      */
     public function clearCache()
     {
-        try {
-            $this->cache && $this->cache->deleteMultiple(array_keys($this->cacheKeys));
-        } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-        }
-        $this->cacheKeys = [];
+        $this->cache->clear();
+        // try {
+        //     $this->cache && $this->cache->deleteMultiple(array_keys($this->cacheKeys));
+        // } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
+        // }
+        // $this->cacheKeys = [];
     }
 
     /**
@@ -450,7 +451,7 @@ class Mokuyu
             if ($this->isFetchSql) {
                 $this->isFetchSql = false;
                 $redata           = $this->greateSQL($sql, $this->bindParam);
-                $this->initQueryParams();
+                // $this->initQueryParams();
 
                 return $redata;
             }
@@ -497,12 +498,14 @@ class Mokuyu
                     $result = false;
                 }
             }
-            $this->initQueryParams();
+            // $this->initQueryParams();
 
             return $result;
         } catch (PDOException $e) {
             $isTransaction && $this->rollback();
             throw $e;
+        } finally {
+            $this->initQueryParams();
         }
 
         //        return 0;
@@ -1370,7 +1373,7 @@ class Mokuyu
             if ($this->isFetchSql) {
                 $this->isFetchSql = false;
                 $redata           = $this->greateSQL($sql, $this->bindParam);
-                $this->initQueryParams();
+                // $this->initQueryParams();
 
                 return $redata;
             }
@@ -1402,7 +1405,7 @@ class Mokuyu
                 $this->errors[] = $pdo->errorInfo()[2];
                 $this->showError(end($this->errors));
             }
-            $this->initQueryParams();
+            // $this->initQueryParams();
             if ($isReturnData) {
                 $da = [];
                 if ($query) {
@@ -1416,6 +1419,8 @@ class Mokuyu
             }
         } catch (PDOException $e) {
             throw $e;
+        } finally {
+            $this->initQueryParams();
         }
     }
 
@@ -1877,7 +1882,6 @@ class Mokuyu
                 $this->queryParams['where'] = $_wh;
             }
         }
-
         return $this;
 
     }
@@ -1956,7 +1960,12 @@ class Mokuyu
         ];
 
         $data['data'] = $this->cacheAction($key);
-        $this->cacheHits++;
+        //如果命中缓存则清空请求参数,
+        //因为sql不会经过query和exec去请求数据库且初始化参数了，下面要初始化一下
+        if ($data['data'] !== null) {
+            $this->initQueryParams();
+            $this->cacheHits++;
+        }
         return $data;
     }
 
@@ -2460,14 +2469,14 @@ class Mokuyu
     protected function cacheAction(string $key, $value = null, int $expire = 3600 * 24)
     {
         try {
-            $key = 'mokuyu:' . $key;
-            if (!isset($this->cacheKeys[$key])) {
-                $this->cacheKeys[$key] = true;
-            }
+
+            // if (!isset($this->cacheKeys[$key])) {
+            //     $this->cacheKeys[$key] = true;
+            // }
             if ($this->debug || $this->cache === null) {
                 return null;
             }
-
+            $key = 'mokuyu:' . $key;
             if (is_null($value)) {
                 return $this->cache->get($key);
             }
