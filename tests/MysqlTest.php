@@ -4,6 +4,8 @@ namespace mokuyu\database\tests;
 
 use PHPUnit\Framework\TestCase;
 use PDO;
+use Exception;
+use PDOException;
 
 class MysqlTest extends TestCase
 {
@@ -202,7 +204,20 @@ class MysqlTest extends TestCase
     {
         $this->db->table('article')->cache(600)->where(['article_id' => 91])->select();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
-        $this->assertEquals(2, $this->db->getCacheHits());
+        $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
+        $this->assertEquals(3, $this->db->getCacheHits());
+    }
+
+    public function testTransation()
+    {
+        try {
+            $this->db->transaction(function () {
+                $this->db->table('article')->where('article_id', 91)->update(['test' => '2']);
+            });
+        } catch (Exception $e) {
+            $this->assertTrue(true, $e instanceof PDOException);
+        }
+
     }
 
 }
