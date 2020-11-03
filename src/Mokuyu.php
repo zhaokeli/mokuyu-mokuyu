@@ -1950,8 +1950,13 @@ class Mokuyu
         $key    = $this->queryParams['queryCache']['key'] ?? null;
         $expire = $this->queryParams['queryCache']['expire'] ?? 5 * 60;
         if ($key === null) {
-            $key = $this->dbConfig['database_name'] . ':' . $this->prefix . $this->queryParams['table'] . ':querycache:' . md5(json_encode([$this->queryParams, $this->bindParam]));
-            $key = strtolower($key);
+            $cacheHash = md5(json_encode([$this->queryParams, $this->bindParam]));
+            $key       = $this->dbConfig['database_name']
+                . ':' . $this->prefix . $this->queryParams['table']
+                . ':querycache:' . $cacheHash[0]
+                . ':' . $cacheHash[1]
+                . ':' . $cacheHash;
+            $key       = strtolower($key);
         }
         $data = [
             'data'   => null,
