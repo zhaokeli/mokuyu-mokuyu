@@ -30,6 +30,7 @@
     - [join(array data)](#joinarray-data)
   - [执行查询并返回结果](#执行查询并返回结果)
     - [select():array](#selectarray)
+    - [column($field, string $key = null, bool $isDeleteIndexKey = false)](#columnfield-string-key--null-bool-isdeleteindexkey--false)
     - [insert(array datas):int](#insertarray-datasint)
     - [update(array datas):int](#updatearray-datasint)
     - [delete(int id=0):int](#deleteint-id0int)
@@ -365,6 +366,10 @@ where or连接的另一种添加方式
 ### select():array
 
 从数据库取回指定数据返回一个多维数据
+
+### column($field, string $key = null, bool $isDeleteIndexKey = false)
+
+返回指定字段和指定索引
 
 ### insert(array datas):int
 

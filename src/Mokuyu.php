@@ -1542,12 +1542,12 @@ class Mokuyu
     }
 
     /**
-     * @param string      $field    返回的列,如果为*则返回数据,参数$key为null时跟select一样
-     * @param string|null $key      索引key,做为数组的索引
-     * @param bool        $isDelKey 如果有多列数据,是否从数组中删除索引列
+     * @param string      $field            返回的列,如果为*则返回所有字段
+     * @param string|null $key              索引key,做为数组的索引,为null时跟select一样
+     * @param bool        $isDeleteIndexKey 如果有多列数据,是否从数组中删除索引key列
      * @return array
      */
-    public function column($field, string $key = null, bool $isDelKey = false)
+    public function column($field, string $key = null, bool $isDeleteIndexKey = false)
     {
         if (is_string($field)) {
             $field = explode(',', $field);
@@ -1564,28 +1564,38 @@ class Mokuyu
                 $this->field($field);
             }
         }
-        $list = $this->select();
-        if ($key === null) {
-            if ($field[0] === '*') {
-                return $list;
-            }
-            if ($isSingle) {
-                return array_column($list, $field[0]);
+        $cacheData = $this->getQueryCache();
+        if ($cacheData === null || $cacheData['data'] === null) {
+            $data = $this->select();
+            if ($key === null) {
+                // if ($field[0] === '*') {
+                //     return $list;
+                // }
+                if ($isSingle) {
+                    // return array_column($list, $field[0]);
+                    $data = array_column($data, $field[0]);
+                }
+                // else {
+                //     return $list;
+                // }
             }
             else {
-                return $list;
+                // $data = [];
+                foreach ($data as $value) {
+                    $data[$value[$key]] = ($field[0] === '*' || !$isSingle) ? $value : $value[$field[0]];
+                    //从数组中删除键
+                    if ($isDeleteIndexKey && is_array($data[$value[$key]]))
+                        unset($data[$value[$key]][$key]);
+                }
+                // return $data;
             }
+            $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+            $cacheData = $data;
         }
         else {
-            $data = [];
-            foreach ($list as $value) {
-                $data[$value[$key]] = ($field[0] === '*' || !$isSingle) ? $value : $value[$field[0]];
-                //从数组中删除键
-                if ($isDelKey && is_array($data[$value[$key]]))
-                    unset($data[$value[$key]][$key]);
-            }
-            return $data;
+            $cacheData = $cacheData['data'];
         }
+        return $cacheData;
 
 
     }
@@ -1940,7 +1950,7 @@ class Mokuyu
     }
 
     /**
-     * 取当前的查询缓存、key、过期时间
+     * 取当前的查询缓存、格式为数组：缓存数据、key、过期时间，缓存数据为null时为无缓存
      */
     protected function getQueryCache()
     {
