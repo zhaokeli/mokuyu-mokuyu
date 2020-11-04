@@ -104,7 +104,9 @@ class MysqlTest extends TestCase
                                               ->select()));
         $this->assertCount(3, $this->db->table('article')->where('article_id', 'in', [31, 32, 33])->limit('0,3')->select());
         $this->assertCount(1, $this->db->table('article')->where(['article_id' => 91])->select());
+        $this->assertCount(1, $this->db->table('article')->where('article_id>1')->where(['article_id' => 91, '_sql' => 'views>0'])->select());
         $this->assertCount(3, $this->db->table('article')->where('article_id', '<>', [45, 47])->limit([0, 3])->select());
+        $this->assertCount(3, $this->db->table('article')->where('article_id', 'in', '31,32,33')->limit('0,3')->select());
     }
 
     public function testGet()
@@ -202,10 +204,11 @@ class MysqlTest extends TestCase
 
     public function testQueryCache()
     {
-        $this->db->table('article')->cache(600)->where(['article_id' => 91])->select();
+        $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
         $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
-        $this->assertEquals(3, $this->db->getCacheHits());
+        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
+        $this->assertEquals(1, $this->db->getCacheHits());
     }
 
     public function testTransation()
@@ -217,6 +220,45 @@ class MysqlTest extends TestCase
         } catch (Exception $e) {
             $this->assertTrue(true, $e instanceof PDOException);
         }
+
+    }
+
+    public function testChunk()
+    {
+        $count = 0;
+        $this->db->table('article')->chunk(5, function ($datas) use (&$count) {
+            $count = array_sum(array_column($datas, 'article_id'));
+            return false;
+        }, null, 'asc');
+        $this->assertEquals(15, $count);
+
+        $count = 0;
+        $this->db->table('article')->chunk(5, function ($datas) use (&$count) {
+            $count    += count($datas);
+            $lastInfo = end($datas);
+            if ($lastInfo['article_id'] == 10) {
+                return false;
+            }
+        }, null, 'asc');
+        $this->assertEquals(10, $count);
+
+        $lastId = 0;
+        $count  = 0;
+        $this->db->table('article')->chunk(50, function ($datas) use (&$lastId, &$count) {
+            $lastInfo = end($datas);
+            $lastId   = $lastInfo['article_id'];
+            $count++;
+        }, null, 'asc');
+        $this->assertEquals(201, $lastId);
+        $this->assertEquals(4, $count);
+
+        $lastId = 1;
+        $this->db->table('article')->chunk(20, function ($datas) use (&$lastId) {
+            $lastInfo = end($datas);
+            $lastId   = $lastInfo['article_id'];
+        }, null, 'desc');
+        $this->assertEquals(1, $lastId);
+
 
     }
 

@@ -31,6 +31,7 @@
   - [执行查询并返回结果](#执行查询并返回结果)
     - [select():array](#selectarray)
     - [column($field, string $key = null, bool $isDeleteIndexKey = false)](#columnfield-string-key--null-bool-isdeleteindexkey--false)
+    - [chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')](#chunkint-count-closure-callback-string-sortfield--null-string-sorttype--asc)
     - [insert(array datas):int](#insertarray-datasint)
     - [update(array datas):int](#updatearray-datasint)
     - [delete(int id=0):int](#deleteint-id0int)
@@ -273,7 +274,10 @@ $map=[
 ``` php
 $map['_sql']='find_in_set(1,`tags`)';
 //或数组形式添加多个
-$map['_sql']=['find_in_set(1,`tags`)','find_in_set(1,`tags`)'];
+$map['_sql']=[
+  'find_in_set(1,`tags`)',
+  'find_in_set(1,`tags`)'
+];
 ```
 
 查询条件有两种方式添加
@@ -370,6 +374,10 @@ where or连接的另一种添加方式
 ### column($field, string $key = null, bool $isDeleteIndexKey = false)
 
 返回指定字段和指定索引
+
+### chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')
+
+分批数据返回处理
 
 ### insert(array datas):int
 

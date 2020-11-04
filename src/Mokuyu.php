@@ -627,7 +627,7 @@ class Mokuyu
         }
         $cacheData = $this->getQueryCache();
         $data      = null;
-        if ($cacheData === null || $cacheData['data'] === null) {
+        if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
             $this->buildSqlConf();
             //处理好后把这个字段保存下来,不然下面执行过后数据会被重置
             $columns = $this->queryParams['field'];
@@ -667,9 +667,9 @@ class Mokuyu
             else {
                 $data = false;
             }
-            if ($cacheData !== null) {
-                $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
-            }
+            // if ($cacheData !== null) {
+            $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+            // }
 
         }
         else {
@@ -1481,7 +1481,7 @@ class Mokuyu
             return false;
         }
         $cacheData = $this->getQueryCache();
-        if ($cacheData === null || $cacheData['data'] === null) {
+        if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
             $this->buildSqlConf();
             $sql   = $this->buildSelect();
             $query = $this->query($sql);
@@ -1492,9 +1492,9 @@ class Mokuyu
             else {
                 $data = $query->fetchAll(PDO::FETCH_ASSOC);
             }
-            if ($cacheData !== null) {
-                $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
-            }
+            // if ($cacheData !== null) {
+            $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+            // }
             $cacheData = $data;
         }
         else {
@@ -1504,20 +1504,22 @@ class Mokuyu
     }
 
     /**
-     * @param int         $nums     遍历块大小
-     * @param Closure     $callback 回调处理函数
-     * @param string|null $field    以哪列排序
-     * @param string      $sort     asc|desc
-     * @return bool
+     * 分批数据返回处理
+     * @param int         $count     每次处理的数据数量
+     * @param Closure     $callback  回调处理函数
+     * @param string|null $sortField 排序字段,字段值必须为数字类型,默认null,则为主键
+     * @param string      $sortType  asc|desc
+     * @return void
      */
-    public function chunk(int $nums, Closure $callback, string $field = null, string $sort = 'asc')
+    public function chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')
     {
-        $sort = strtolower($sort);
-        if ($field === null) {
-            $field = $this->getPK();
+        $sortType = strtolower($sortType);
+        if ($sortField === null) {
+            $sortField = $this->getPK();
+
         }
-        $this->limit($nums);
-        $this->order($field . ' ' . $sort);
+        $this->limit($count);
+        $this->order($sortField . ' ' . $sortType);
         $temBak = [
             'queryParams'  => $this->queryParams,
             'bindParam'    => $this->bindParam,
@@ -1528,16 +1530,15 @@ class Mokuyu
         ];
         while ($list = $this->select()) {
             if (false === call_user_func($callback, $list)) {
-                return false;
+                break;
             }
             $end    = end($list);
-            $lastId = $end[$field];
+            $lastId = $end[$sortField];
             foreach ($temBak as $key => $value) {
                 $this->$key = $value;
             }
-            $this->where([$field . '[' . ($sort == 'asc' ? '>' : '<') . ']' => $lastId]);
+            $this->where([$sortField . '[' . ($sortType == 'asc' ? '>' : '<') . ']' => $lastId]);
         }
-        return true;
 
     }
 
@@ -1565,7 +1566,7 @@ class Mokuyu
             }
         }
         $cacheData = $this->getQueryCache();
-        if ($cacheData === null || $cacheData['data'] === null) {
+        if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
             $data = $this->select();
             if ($key === null) {
                 // if ($field[0] === '*') {
@@ -1589,7 +1590,7 @@ class Mokuyu
                 }
                 // return $data;
             }
-            $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+            $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
             $cacheData = $data;
         }
         else {
@@ -1815,11 +1816,12 @@ class Mokuyu
      * 强制使用写pdo在一些强一至性的场景可以使用
      * @DateTime 2020-01-06
      * @Author   mokuyu
+     * @param bool $isUse
      * @return Mokuyu
      */
-    public function useWriteConn()
+    public function useWriteConn(bool $isUse = true)
     {
-        $this->queryParams['useWriteConn'] = true;
+        $this->queryParams['useWriteConn'] = $isUse;
 
         return $this;
     }
@@ -1927,9 +1929,9 @@ class Mokuyu
     }
 
     /**
-     * 缓存当前查询,支持get select两个操作
-     * @param string|int $keyOrTime 缓存key或过期时间,为过期时间时key由系统自动生成
-     * @param int        $expire
+     * 缓存当前查询,支持get,select,column 操作
+     * @param string|int $keyOrTime 缓存key或过期时间,为整形时时key由系统自动生成
+     * @param int        $expire    过期时间
      * @return Mokuyu
      */
     public function cache($keyOrTime, int $expire = 10 * 60)
