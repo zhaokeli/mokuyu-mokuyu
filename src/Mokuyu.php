@@ -123,6 +123,11 @@ class Mokuyu
     protected $logs = [];
 
     /**
+     * 事务启动次数,事务嵌套时用
+     * @var int
+     */
+    private $transTimes = 0;
+    /**
      * pdo配置项
      * @var
      */
@@ -314,6 +319,7 @@ class Mokuyu
         return $this->summary('AVG', $field);
     }
 
+
     /**
      * 开启事务
      * @DateTime 2019-04-13
@@ -322,8 +328,11 @@ class Mokuyu
      */
     public function beginTransaction()
     {
-
-        $this->pdoWrite->beginTransaction();
+        $this->transTimes++ === 0 && $this->pdoWrite->beginTransaction();
+        if ($this->transTimes <= 0) {
+            $this->transTimes = 1;
+        }
+        $this->saveTransPoint();
     }
 
     /**
@@ -350,7 +359,9 @@ class Mokuyu
      */
     public function commit()
     {
-        $this->pdoWrite->commit();
+        $this->transTimes === 1 && $this->pdoWrite->commit();
+        $this->transTimes--;
+
     }
 
     /**
@@ -450,10 +461,9 @@ class Mokuyu
 
             if ($this->isFetchSql) {
                 $this->isFetchSql = false;
-                $redata           = $this->greateSQL($sql, $this->bindParam);
                 // $this->initQueryParams();
 
-                return $redata;
+                return $this->greateSQL($sql, $this->bindParam);
             }
             if ($this->isAbort) {
                 die($this->greateSQL($sql, $this->bindParam));
@@ -1372,10 +1382,9 @@ class Mokuyu
 
             if ($this->isFetchSql) {
                 $this->isFetchSql = false;
-                $redata           = $this->greateSQL($sql, $this->bindParam);
                 // $this->initQueryParams();
 
-                return $redata;
+                return $this->greateSQL($sql, $this->bindParam);
             }
             if ($this->isAbort) {
                 die($this->greateSQL($sql, $this->bindParam));
@@ -1432,14 +1441,22 @@ class Mokuyu
     }
 
     /**
+     * 保存事务回滚点
+     */
+    private function saveTransPoint()
+    {
+        $this->pdoWrite->exec('SAVEPOINT dbback_' . $this->transTimes);
+    }
+
+    /**
      * 事务回滚
      * @DateTime 2019-04-13
      * @Author   mokuyu
-     * @return void
+     * @return bool
      */
     public function rollback()
     {
-        $this->pdoWrite->rollBack();
+        return (bool)$this->pdoWrite->exec('ROLLBACK TO SAVEPOINT dbback_' . $this->transTimes--);
     }
 
     /**
@@ -1671,26 +1688,25 @@ class Mokuyu
      */
     public function transaction(Closure $callback)
     {
-        $this->pdoWrite->beginTransaction();
+        $this->beginTransaction();
         // We'll simply execute the given callback within a try / catch block
         // and if we catch any exception we can rollback the transaction
         // so that none of the changes are persisted to the database.
         try {
             $result = $callback($this);
+            $this->commit();
+            // } catch (PDOException $e) {
+            //     $this->rollback();
+            //     throw $e;
 
-            $this->pdoWrite->commit();
-        } catch (PDOException $e) {
-            $this->pdoWrite->rollBack();
+
+            // If we catch an exception, we will roll back so nothing gets messed
+            // up in the database. Then we'll re-throw the exception so it can
+            // be handled how the developer sees fit for their applications.
+        } catch (Exception $e) {
+            $this->rollBack();
             throw $e;
         }
-
-        // If we catch an exception, we will roll back so nothing gets messed
-        // up in the database. Then we'll re-throw the exception so it can
-        // be handled how the developer sees fit for their applications.
-        // catch (Exception $e) {
-        //     $this->pdoWrite->rollBack();
-        //     throw $e;
-        // }
 
         return $result;
     }

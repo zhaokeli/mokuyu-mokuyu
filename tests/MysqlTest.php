@@ -6,6 +6,7 @@ use PHPUnit\Framework\TestCase;
 use PDO;
 use Exception;
 use PDOException;
+use PDOStatement;
 
 class MysqlTest extends TestCase
 {
@@ -211,18 +212,124 @@ class MysqlTest extends TestCase
         $this->assertEquals(1, $this->db->getCacheHits());
     }
 
+    /**
+     * 测试事务功能
+     */
     public function testTransation()
     {
+        //测试闭包事务中的事务正常更新
         try {
             $this->db->transaction(function () {
-                $this->db->table('article')->where('article_id', 91)->update(['test' => '2']);
+                try {
+                    $this->db->beginTransaction();
+                    $this->db->table('article')->where('article_id', 91)->update(['views' => '2']);
+                    $this->db->commit();
+                } catch (Exception $e) {
+                    $this->db->rollback();
+                }
             });
         } catch (Exception $e) {
             $this->assertTrue(true, $e instanceof PDOException);
         }
 
+        //测试闭包事务中的事务异常
+        try {
+            $this->db->transaction(function () {
+                $this->db->beginTransaction();
+                $this->db->table('article')->where('article_id', 91)->update(['views' => '4']);
+                //$this->db->commit();
+                // throw new Exception('error');
+                throw new PDOException('error');
+            });
+        } catch (Exception $e) {
+            $this->assertTrue(true, $e instanceof PDOException);
+            $this->assertEquals(2, $this->getViews(91));
+        }
+
+        //测试事务中的事务报错
+        try {
+            $this->db->transaction(function () {
+                try {
+                    $this->db->beginTransaction();
+                    $this->db->table('article')->where('article_id', 91)->update(['test' => '2']);
+                    $this->db->commit();
+                } catch (Exception $e) {
+                    $this->assertTrue(true, $e instanceof PDOException);
+                    $this->db->rollback();
+                }
+            });
+        } catch (Exception $e) {
+            $this->assertTrue(true, $e instanceof PDOException);
+        }
+
+        //测试事务嵌套,数据更新是否达到预期
+        $this->assertEquals(1, $this->updateViews(91, 2288));
+        $this->assertEquals(1, $this->updateViews(93, 2289));
+
+        $this->db->beginTransaction();
+        $this->updateViews(91, 21);
+        $this->assertEquals(21, $this->getViews(91));
+
+        //嵌套回滚事务,只回滚此处更改
+        try {
+            $this->db->beginTransaction();
+            $this->updateViews(93, 22);
+            $this->updateViews(91, 25);
+            $this->assertEquals(22, $this->getViews(93));
+            $this->assertEquals(25, $this->getViews(91));
+            throw new Exception('test');
+            //$this->db->commit();
+        } catch (Exception $e) {
+            $this->db->rollback();
+        }
+        //这个记录回滚成2289
+        $this->assertEquals(2289, $this->getViews(93));
+        //上个回滚不能影响这个记录
+        $this->assertEquals(21, $this->getViews(91));
+
+
+        //嵌套正常提交事务
+        try {
+            $this->db->beginTransaction();
+            $this->updateViews(93, 23);
+            $this->db->commit();
+        } catch (Exception $e) {
+            $this->db->rollback();
+        }
+        $this->assertEquals(23, $this->getViews(93));
+        $this->assertEquals(21, $this->getViews(91));
+
+        //最外层回滚
+        $this->db->rollback();
+        $this->assertEquals(2288, $this->getViews(91));
+        $this->assertEquals(2289, $this->getViews(93));
+
     }
 
+    /**
+     * 返回文章浏览量
+     * @param $articleId
+     * @return array|bool|mixed|PDOStatement|string
+     */
+    private function getViews($articleId)
+    {
+        return $this->db->table('article')->where('article_id', $articleId)->field('views')->get();
+    }
+
+    /**
+     * 更新文件浏览量
+     * @param     $articleId
+     * @param int $views
+     * @return bool|int|string
+     */
+    private function updateViews($articleId, $views = 0)
+    {
+        return $this->db->table('article')->where('article_id', $articleId)->update(['views' => $views]);
+    }
+
+    /**
+     * 测试遍历功能
+     */
     public function testChunk()
     {
         $count = 0;

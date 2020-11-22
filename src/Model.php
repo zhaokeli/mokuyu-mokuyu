@@ -65,8 +65,16 @@ use Psr\SimpleCache\CacheInterface;
  */
 abstract class Model
 {
+    /**
+     * 插入操作
+     */
     protected const ACTION_INSERT = 0;
+
+    /**
+     * 更新操作
+     */
     protected const ACTION_UPDATE = 1;
+
     /**
      * 添加或更新时自动处理的字段，如果是键值对,则值就是这个字段的值，否则自动使用本类 set[Field]Attr 方法返回值来设置这个字段
      * 添加时不管数据中有没有此字段都会使用本类成员函数解析处理
@@ -174,6 +182,12 @@ abstract class Model
      */
     protected $append = [];
 
+    /**
+     * 初始化模型
+     * Model constructor.
+     * @param Mokuyu $db
+     * @param null   $tableName
+     */
     public function __construct(Mokuyu $db, $tableName = null)
     {
         if ($tableName !== null) {
@@ -274,9 +288,10 @@ abstract class Model
 
     /**
      * 字段数据填充
-     * @param $key
-     * @param $value
-     * @param $data
+     * @param      $key
+     * @param      $value
+     * @param      $data
+     * @param null $action
      */
     protected function parseAutoField($key, $value, &$data, $action = null)
     {
@@ -364,6 +379,9 @@ abstract class Model
         }
     }
 
+    /**
+     * 初始化请求参数
+     */
     protected function initQuery()
     {
         $this->db->table($this->tableName);
