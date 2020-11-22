@@ -92,6 +92,7 @@ CREATE TABLE `kl_article` (
   `views` int(11) NOT NULL DEFAULT '0' COMMENT '浏览次数',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `value` varchar(255) NULL DEFAULT '' COMMENT '测试可空值' ,
   PRIMARY KEY (`article_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 DROP TABLE IF EXISTS `kl_category`;

@@ -25,10 +25,36 @@ class MysqlTest extends TestCase
     {
         //添加单个
         $result = $this->db->abort(false)->table('article')->add([
+            'title'        => 'this is php data!' . rand(100, 1000),
+            //过滤掉数据库中没有的字段,和主键
+            'noexistfield' => '0',
+            'views'        => rand(100, 1000),
+            //测试空值
+            'value'        => null,
+        ]);
+        $this->assertGreaterThan(0, $result);
+
+        //测试空表
+        $result = $this->db->abort(false)->add([
             'title' => 'this is php data!' . rand(100, 1000),
             'views' => rand(100, 1000),
         ]);
+        $this->assertEquals(0, $result);
+
+        //测试数组和对象和bool值
+        $result = $this->db->abort(false)->table('article')->add([
+            'title' => new \stdClass(),
+            'views' => false,
+            'value' => [1, 2, 3],
+        ]);
         $this->assertGreaterThan(0, $result);
+
+        // $result = $this->db->abort(false)->add([
+        //     'title' => 'this is php data!' . rand(100, 1000),
+        //     'views' => rand(100, 1000),
+        //     'value' => [1, 2, 3],
+        // ]);
+        // $this->assertEquals(0, $result);
 
     }
 
@@ -40,23 +66,89 @@ class MysqlTest extends TestCase
         $this->assertEquals(0, $this->db->save([]));
         $this->assertEquals(0, $this->db->update([]));
         //更新单条数据
-        $this->assertGreaterThan(0, $this->db->table('article')->update(['article_id' => 1, 'views' => 999999]));
-        $this->assertGreaterThan(0, $this->db->table('article')->save(['article_id' => 1, 'views' => 99999]));
+        $this->assertGreaterThan(0, $this->db
+            ->table('article')
+            ->update(['article_id' => 1, 'views' => 999999]));
+        $this
+            ->assertGreaterThan(0, $this
+                ->db
+                ->table('article')
+                ->save(['article_id' => 1, 'views' => 99999]));
+
+        //测试批量带条件报异常
+        $this->assertEquals(0, $this->db
+            ->table('article')
+            ->where('1=1')
+            ->update([
+                [
+                    'views' => rand(10, 99) + 9999,
+                ],
+                [
+
+                    'views' => rand(10, 99) + 9999,
+                ],
+                [
+                    'views' => rand(10, 99) + 9999,
+                ],
+            ]));
+    }
+
+    public function testUpdateJoin()
+    {
+        $this->assertGreaterThan(0, $this->db
+            ->table('article')
+            ->where('category_id', 1)
+            ->join([
+                '[>]category' => ['category_id'],
+            ])
+            ->update(['views' => 909]));
+    }
+
+    public function testUpdateTypeValue()
+    {
         //测试批量事务更新
-        $this->assertGreaterThan(0, $this->db->table('article')->update([
-            [
-                'article_id' => 2,
-                'views'      => rand(10, 99) + 9999,
-            ],
-            [
-                'article_id' => 3,
-                'views'      => rand(10, 99) + 9999,
-            ],
-            [
-                'article_id' => 4,
-                'views'      => rand(10, 99) + 9999,
-            ],
-        ]));
+        $this->assertEquals(1, $this->db
+            ->table('article')
+            ->update([
+                [
+                    'article_id'    => 2,
+                    'article.views' => rand(10, 99) + 9999,
+                    'value'         => null,
+                ],
+                [
+                    'article_id'    => 3,
+                    'article.views' => rand(10, 99) + 9999,
+                    'value'         => [1, 2, 3],
+                ],
+                [
+                    'article_id'    => 4,
+                    'article.views' => rand(10, 99) + 9999,
+                    'value'         => true,
+                ],
+            ]));
+    }
+
+    public function testUpdateOperator()
+    {
+        $this->updateViews(1, 200);
+        //测试字段加减
+        $this->assertGreaterThan(0, $this->db
+            ->table('article')
+            ->save(['article_id' => 1, 'views[+]' => 100]));
+        $this->assertEquals(300, $this->getViews(1));
+
+        $this->assertGreaterThan(0, $this->db
+            ->table('article')
+            ->save(['article_id' => 1, 'views[-]' => 50]));
+        $this->assertEquals(250, $this->getViews(1));
+        $this->assertGreaterThan(0, $this->db
+            ->table('article')
+            ->save(['article_id' => 1, 'views[*]' => 2]));
+        $this->assertEquals(500, $this->getViews(1));
+        $this->assertGreaterThan(0, $this->db
+            ->table('article')
+            ->save(['article_id' => 1, 'views[/]' => 5]));
+        $this->assertEquals(100, $this->getViews(1));
     }
 
     /**
@@ -136,7 +228,7 @@ class MysqlTest extends TestCase
         $this->assertEquals(199, $this->db->table('Article')->where('article_id', '<>', [198, 200])->avg('article_id'));
         $this->assertEquals(3, $this->db->table('Article')->where('article_id', '<>', [198, 200])->count());
         $this->assertEquals(1, $this->db->table('Article')->min('article_id'));
-        $this->assertEquals(201, $this->db->table('Article')->max('article_id'));
+        $this->assertEquals(202, $this->db->table('Article')->max('article_id'));
         $this->assertEquals(399, $this->db->table('Article')->where('article_id', '<>', [199, 200])->sum('article_id'));
         $this->db->table('Article')->order('article_id desc')->rand()->group('views')->get();
     }
@@ -356,7 +448,7 @@ class MysqlTest extends TestCase
             $lastId   = $lastInfo['article_id'];
             $count++;
         }, null, 'asc');
-        $this->assertEquals(201, $lastId);
+        $this->assertEquals(202, $lastId);
         $this->assertEquals(4, $count);
 
         $lastId = 1;

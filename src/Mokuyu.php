@@ -17,6 +17,8 @@ use PDO;
 use PDOException;
 use PDOStatement;
 use Psr\SimpleCache\CacheInterface;
+use mokuyu\database\exception\QueryParamException;
+use mokuyu\database\exception\QueryResultException;
 
 /**
  * @property PDO   pdoWrite
@@ -401,7 +403,7 @@ class Mokuyu
     public function delete($id = 0)
     {
 
-        if (empty($this->queryParams['table'])) {
+        if (empty($this->queryParams['srcTable'])) {
             return 0;
         }
         if (!$this->queryParams['where'] && $id !== true) {
@@ -626,7 +628,7 @@ class Mokuyu
     {
         $this->limit(1);
         //这个列要放这里取要不然请求过后配置就被清空啦
-        if (empty($this->queryParams['table'])) {
+        if (empty($this->queryParams['srcTable'])) {
             return false;
         }
         //下面使用主键来查询
@@ -697,7 +699,7 @@ class Mokuyu
     public function getFields(): array
     {
         try {
-            if (empty($this->queryParams['table'])) {
+            if (empty($this->queryParams['srcTable'])) {
                 return [];
             }
             // $table_name = str_replace($this->yinhao, '', $this->queryParams['srcTable']);
@@ -851,7 +853,7 @@ class Mokuyu
     public function getPK()
     {
         try {
-            if (empty($this->queryParams['table'])) {
+            if (empty($this->queryParams['srcTable'])) {
                 return '';
             }
             // $table_name  = str_replace($this->yinhao, '', $this->queryParams['table']);
@@ -1055,7 +1057,7 @@ class Mokuyu
     public function has()
     {
         $this->queryParams['LIMIT'] = ' LIMIT 1';
-        if (empty($this->queryParams['table'])) {
+        if (empty($this->queryParams['srcTable'])) {
             return false;
         }
         $this->buildSqlConf();
@@ -1111,80 +1113,95 @@ class Mokuyu
      */
     public function insert(array $datas)
     {
-        $srcTable = $this->queryParams['table'];
-        $this->buildSqlConf();
-        $table = $this->queryParams['table'];
-        if (empty($table)) {
+        try {
+            $srcTable = $this->queryParams['table'];
+            $this->buildSqlConf();
+            $table = $this->queryParams['table'];
+            if (empty($srcTable)) {
+                throw new QueryParamException('数据表不能为空');
+                // return 0;
+            }
+            $pk = $this->getPK();
+
+            if (count($datas) == count($datas, 1)) {
+                $datas = [$datas];
+            }
+            if (!isset($datas[0])) {
+                $datas = [$datas];
+            }
+            $isMulData = count($datas) > 1;
+            //取表的所有字段
+            $table_fields = $this->getFields();
+            $index        = $isMulData ? 0 : null;
+            $sql          = '';
+            foreach ($datas as $data) {
+                $values  = [];
+                $columns = [];
+                foreach ((array)$data as $key => $value) {
+                    $field = lcfirst($key);
+                    $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
+                    if (($table_fields && !in_array($field, $table_fields)) || $field == $pk) {
+                        //过滤掉数据库中没有的字段,和主键
+                        continue;
+                    }
+                    $info      = $this->parseFormatField($key);
+                    $column    = $this->yinhao . $info['field'] . $this->yinhao;
+                    $columns[] = $column;
+                    $col       = ':' . $info['field'];
+
+                    if (is_null($value)) {
+                        $this->appendBindParam($col, 'NULL', $index);
+                    }
+                    elseif (is_object($value) || is_array($value)) {
+                        $this->appendBindParam($col, json_encode($value), $index);
+                    }
+                    elseif (is_bool($value)) {
+                        $this->appendBindParam($col, ($value ? '1' : '0'), $index);
+                    }
+                    elseif (is_integer($value) || is_double($value) || is_string($value)) {
+                        $this->appendBindParam($col, $value, $index);
+                    }
+                    else {
+                        $this->appendBindParam($col, $value, $index);
+                    }
+                    $values[] = $col;
+                }
+                if ($index === 0 || is_null($index)) {
+                    $cols = implode(',', $columns);
+                    $vals = implode(',', $values);
+                    if (!$cols || !$vals) {
+                        throw new QueryParamException('插入的字段或数据不能为空');
+                        // return 0;
+                    }
+                    $sql = 'INSERT INTO ' . $table . ' (' . $cols . ') VALUES (' . $vals . ')';
+                }
+                $isMulData && $index++;
+
+            }
+            $result = $this->exec($sql);
+            if (is_string($result)) {
+                // return $result;
+                throw new QueryResultException('', 0, null, $result);
+            }
+            if ($this->databaseType === 'oracle') {
+                if ($pk && $result) {
+                    $result = $this->table($srcTable)->field($pk)->order($pk . ' desc')->limit(1)->get();
+                    $result = $result ?: 1;
+                }
+
+                // return $result;
+                throw new QueryResultException('', 0, null, $result);
+            }
+            // $lastId = ;
+
+            return $this->pdoWrite->lastInsertId() ?: $result;
+        } catch (QueryResultException $e) {
+            return $e->getQueryResult();
+        } catch (QueryParamException $e) {
             return 0;
+        } finally {
+            $this->initQueryParams();
         }
-        $pk = $this->getPK();
-
-        if (count($datas) == count($datas, 1)) {
-            $datas = [$datas];
-        }
-        $isMulData = count($datas) > 1;
-        //取表的所有字段
-        $table_fields = $this->getFields();
-        $index        = $isMulData ? 0 : null;
-        $sql          = '';
-        foreach ($datas as $data) {
-            $values  = [];
-            $columns = [];
-            foreach ((array)$data as $key => $value) {
-                $field = lcfirst($key);
-                $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
-                if (($table_fields && !in_array($field, $table_fields)) || $field == $pk) {
-                    //过滤掉数据库中没有的字段,和主键
-                    continue;
-                }
-                $info      = $this->parseFormatField($key);
-                $column    = $this->yinhao . $info['field'] . $this->yinhao;
-                $columns[] = $column;
-                $col       = ':' . $info['field'];
-
-                if (is_null($value)) {
-                    $this->appendBindParam($col, 'NULL', $index);
-                }
-                elseif (is_object($value) || is_array($value)) {
-                    $this->appendBindParam($col, json_encode($value), $index);
-                }
-                elseif (is_bool($value)) {
-                    $this->appendBindParam($col, ($value ? '1' : '0'), $index);
-                }
-                elseif (is_integer($value) || is_double($value) || is_string($value)) {
-                    $this->appendBindParam($col, $value, $index);
-                }
-                else {
-                    $this->appendBindParam($col, $value, $index);
-                }
-                $values[] = $col;
-            }
-            if ($index === 0 || is_null($index)) {
-                $cols = implode(',', $columns);
-                $vals = implode(',', $values);
-                if (!$cols || !$vals) {
-                    return 0;
-                }
-                $sql = 'INSERT INTO ' . $table . ' (' . $cols . ') VALUES (' . $vals . ')';
-            }
-            $isMulData && $index++;
-
-        }
-        $result = $this->exec($sql);
-        if (is_string($result)) {
-            return $result;
-        }
-        if ($this->databaseType === 'oracle') {
-            if ($pk && $result) {
-                $result = $this->table($srcTable)->field($pk)->order($pk . ' desc')->limit(1)->get();
-                $result = $result ?: 1;
-            }
-
-            return $result;
-        }
-        // $lastId = ;
-
-        return $this->pdoWrite->lastInsertId() ?: $result;
 
     }
 
@@ -1339,7 +1356,7 @@ class Mokuyu
             $this->$key = $value;
         }
         $this->page($page, $pageSize);
-        if (empty($this->queryParams['table'])) {
+        if (empty($this->queryParams['srcTable'])) {
             return false;
         }
         $this->buildSqlConf();
@@ -1468,7 +1485,7 @@ class Mokuyu
      */
     public function save($datas)
     {
-        if (empty($this->queryParams['table'])) {
+        if (empty($this->queryParams['srcTable'])) {
             return 0;
         }
         //如果条件为空,则查找是不是含有主键,有主键则更新,没有则插入
@@ -1494,7 +1511,7 @@ class Mokuyu
      */
     public function select()
     {
-        if (empty($this->queryParams['table'])) {
+        if (empty($this->queryParams['srcTable'])) {
             return false;
         }
         $cacheData = $this->getQueryCache();
@@ -1721,111 +1738,132 @@ class Mokuyu
      */
     public function update(array $datas)
     {
-
-        if (empty($this->queryParams['table'])) {
-            return 0;
-        }
-        if (count($datas) === count($datas, 1)) {
-            $datas = [$datas];
-        }
-        $isMulData = count($datas) > 1;
-        $index     = $isMulData ? 0 : null;
-
-        $whereStr = '';
-        $pk       = '';
-        if (empty($this->queryParams['where'])) {
-            $pk = $this->getPK();
-            if ($pk) {
-                if (isset($datas[0][$pk])) {
-                    // $this->where([$pk => $datas[0][$pk]]);
-                    // unset($datas[0][$pk]); //删除对主键的设置':bindparam_' . trim($key, ':');
-                    $whereStr = ' WHERE ' . $this->yinhao . $pk . $this->yinhao . ' = :bindparam_' . $pk;
-                }
-                else {
-                    return 0;
-                }
+        try {
+            if (empty($this->queryParams['srcTable'])) {
+                // return 0;
+                throw new QueryParamException('table is not empty');
             }
-            else {
-                return 0;
+            // if (count($datas) === count($datas, 1)) {
+            //     $datas = [$datas];
+            // }
+            if (!isset($datas[0])) {
+                $datas = [$datas];
             }
-        }
-        elseif ($isMulData) {
-            return 0;
-        }
-        $this->buildSqlConf();
-        if (!$whereStr) {
-            $whereStr = $this->queryParams['where'];
-        }
-        //取表的所有字段
-        $table_fields = $this->getFields();
-        $fields       = [];
-        $sql          = '';
-        foreach ($datas as $data) {
-            foreach ($data as $key => $value) {
-                $info = $this->parseFormatField($key);
-                //如果是主键的话就加参数然后,跳过
-                if ($pk && $info['field'] == $pk) {
-                    if ($isMulData) {
-                        $this->bindParam[$index][':bindparam_' . $pk] = $value;
+            $isMulData = count($datas) > 1;
+            $index     = $isMulData ? 0 : null;
+
+            $whereStr = '';
+            $pk       = '';
+            if (empty($this->queryParams['where'])) {
+                $pk = $this->getPK();
+                if ($pk) {
+                    if (isset($datas[0][$pk])) {
+                        // $this->where([$pk => $datas[0][$pk]]);
+                        // unset($datas[0][$pk]); //删除对主键的设置':bindparam_' . trim($key, ':');
+                        $whereStr = ' WHERE ' . $this->yinhao . $pk . $this->yinhao . ' = :bindparam_' . $pk;
                     }
                     else {
-                        $this->bindParam[':bindparam_' . $pk] = $value;
-                    }
-                    continue;
-                }
-                if ($table_fields && !in_array($info['field'], $table_fields)) {
-                    continue;
-                }
-                //字段+ - * / 本字段算术运算
-                preg_match('/([\w]+)(\[(\+|\-|\*|\/)\])?/i', $info['field'], $match);
-                if (isset($match[3])) {
-                    if (is_numeric($value)) {
-                        $fields[] = $this->joinField($match[1]) . ' = ' . $this->joinField($match[1]) . ' ' . $match[3] . ' ' . $value;
+                        // return 0;
+                        throw new QueryParamException('请求数据中必须有主键条件');
                     }
                 }
                 else {
-                    //如果join不为空的话就把字段默认加上第一个表为前缀
-                    if ($this->queryParams['join'] && !$info['table']) {
-                        $info['table'] = trim($this->queryParams['table'], $this->yinhao);
+                    // return 0;
+                    throw new QueryParamException('数据表中没有主键');
+                }
+            }
+            elseif ($isMulData) {
+                // return 0;
+                throw new QueryParamException('批量更新不能添加where,必须在更新数据中添加主键值');
+            }
+            $this->buildSqlConf();
+            if (!$whereStr) {
+                $whereStr = $this->queryParams['where'];
+            }
+            //取表的所有字段
+            $table_fields = $this->getFields();
+            $fields       = [];
+            $sql          = '';
+            foreach ($datas as $data) {
+                foreach ($data as $key => $value) {
+                    $info = $this->parseFormatField($key);
+                    //如果是主键的话就加参数然后,跳过
+                    if ($pk && $info['field'] == $pk) {
+                        if ($isMulData) {
+                            $this->bindParam[$index][':bindparam_' . $pk] = $value;
+                        }
+                        else {
+                            $this->bindParam[':bindparam_' . $pk] = $value;
+                        }
+                        continue;
                     }
+                    if ($table_fields && !in_array($info['field'], $table_fields)) {
+                        continue;
+                    }
+
                     $col    = ':' . $info['field'];
                     $column = $this->yinhao . $info['field'] . $this->yinhao;
                     if ($info['table']) {
                         $col    .= '_' . $info['table'];
                         $column = $this->yinhao . $info['table'] . $this->yinhao . '.' . $column;
                     }
-                    if (is_null($value)) {
-                        $fields[] = $column . ' = NULL';
-                    }
-                    elseif (is_object($value) || is_array($value)) {
-                        preg_match("/\(JSON\)\s*([\w]+)/i", $key, $column_match);
-                        $this->appendBindParam($col,
-                            isset($column_match[0]) ? json_encode($value) : serialize($value)
-                            , $index);
-
-                        $fields[] = $column . ' = ' . $col;
-                    }
-                    elseif (is_bool($value)) {
-                        $this->appendBindParam($col, ($value ? '1' : '0'), $index);
-                        $fields[] = $column . ' = ' . $col;
-                    }
-                    elseif (is_integer($value) || is_double($value) || is_string($value)) {
+                    //字段+ - * / 本字段算术运算
+                    // preg_match('/([\w]+)(\[(\+|\-|\*|\/)\])?/i', $info['field'], $match);
+                    if (in_array($info['rightOperator'], ['+', '-', '*', '/']) && is_numeric($value)) {
+                        $fie = $this->joinField($info, false);
                         $this->appendBindParam($col, $value, $index);
-                        $fields[] = $column . ' = ' . $col;
+                        $fields[] = $fie . ' = ' . $fie . ' ' . $info['rightOperator'] . ' ' . $col;
                     }
                     else {
-                        $this->appendBindParam($col, $value, $index);
-                        $fields[] = $column . ' = ' . $col;
+                        //如果join不为空的话就把字段默认加上第一个表为前缀
+                        if ($this->queryParams['join'] && !$info['table']) {
+                            $info['table'] = trim($this->queryParams['table'], $this->yinhao);
+                            $this->buildJoin();
+                        }
+
+                        // if (is_null($value)) {
+                        //     // $fields[] = $column . ' = NULL';
+                        //     $this->appendBindParam($col, $value, $index);
+                        //     $fields[] = $column . ' = NULL';
+                        // }
+                        if (is_object($value) || is_array($value)) {
+                            // preg_match("/\(JSON\)\s*([\w]+)/i", $key, $column_match);
+                            $this->appendBindParam($col, json_encode($value), $index);
+
+                            $fields[] = $column . ' = ' . $col;
+                        }
+                        elseif (is_bool($value)) {
+                            $this->appendBindParam($col, ($value ? '1' : '0'), $index);
+                            $fields[] = $column . ' = ' . $col;
+                        }
+                        elseif (is_integer($value) || is_double($value) || is_string($value)) {
+                            $this->appendBindParam($col, $value, $index);
+                            $fields[] = $column . ' = ' . $col;
+                        }
+                        else {
+                            $this->appendBindParam($col, $value, $index);
+                            $fields[] = $column . ' = ' . $col;
+                        }
                     }
                 }
-            }
-            if ($index === 0 || is_null($index)) {
-                $sql = 'UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $whereStr;
-            }
-            $isMulData && $index++;
-        }
 
-        return $this->exec($sql);
+                if (!$fields) {
+                    // return 0;
+                    throw new QueryParamException('更新字段不能为空');
+                }
+                if ($index === 0 || is_null($index)) {
+                    $sql = 'UPDATE ' . $this->queryParams['table'] . ' ' . $this->queryParams['join'] . ' SET ' . implode(', ', $fields) . $whereStr;
+                }
+                $isMulData && $index++;
+            }
+
+            return $this->exec($sql);
+        } catch (QueryParamException $e) {
+
+            return 0;
+        } finally {
+            $this->initQueryParams();
+        }
     }
 
     /**
@@ -2598,10 +2636,10 @@ class Mokuyu
     }
 
     /**
-     * 解析SELECT字段
-     * 解析表是不是按指定的格式存储,并且把use.id这样的格式解析成`use`.`id`
+     * 把解析出的字段信息连接起来,如表前缀 别名等
+     * 如：把use.id这样的格式解析成`use`.`id`
      * @param      $field
-     * @param bool $isJoinAlias
+     * @param bool $isJoinAlias 是否加上别名
      * @return string
      */
     protected function joinField($field, $isJoinAlias = true): string
@@ -2659,13 +2697,13 @@ class Mokuyu
         ];
         //解析字段中 age[>]这一类的标识识,#使用数据库函数
         //             if (preg_match('/(#?)([\w\(\)\.\-]+)(\[\s*?(\>|\>\=|\<|\<\=|\!|\<\>|\>\<|\!?~)\s*?\])/i', $field, $match)) {
-        if (preg_match('/(#?)([\w().\-]+)(\[\s*?(>|>=|<|<=|!|<>|><|!?~)\s*?\])/i', $field, $match)) {
-            $arr['field']         = $match[2];
-            $arr['rightOperator'] = $match[4];
+        if (preg_match('@(#?)(?<field>[\w().\-]+)(\[\s*?(?<rightOperator>\+|-|\*|/|>|>=|<|<=|!|<>|><|!?~)\s*?])@i', $field, $match)) {
+            $arr['field']         = $match['field'];
+            $arr['rightOperator'] = $match['rightOperator'];
         }
 
         //查看是不是有数据表
-        preg_match('/(\(JSON\)\s*|^#)?([a-zA-Z0-9_]*)\.([a-zA-Z0-9_]*)/', $field, $column_match);
+        preg_match('/(\(JSON\)\s*|^#)?(?<tableName>[a-zA-Z0-9_]*)\.(?<field>[a-zA-Z0-9_]*)/', $field, $column_match);
         if (isset($column_match[2], $column_match[3])) {
             //有数据表的情况下
             $arr['srcTable'] = $this->parseName($column_match[2]);
