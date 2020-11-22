@@ -2151,7 +2151,7 @@ class Mokuyu
         //这个地方不能排序,表的联接跟顺序有关
         $table = $this->queryParams['table'];
         if ($table == '') {
-            throw new PDOException('table cannot empty when join is not empty.');
+            throw new QueryParamException('table cannot empty when join is not empty.');
         }
         $join_key = is_array($data) ? array_keys($data) : null;
 
