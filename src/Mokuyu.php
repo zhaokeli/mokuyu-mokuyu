@@ -1149,10 +1149,10 @@ class Mokuyu
                     $columns[] = $column;
                     $col       = ':' . $info['field'];
 
-                    if (is_null($value)) {
-                        $this->appendBindParam($col, 'NULL', $index);
-                    }
-                    elseif (is_object($value) || is_array($value)) {
+                    // if (is_null($value)) {
+                    //     $this->appendBindParam($col, 'NULL', $index);
+                    // }
+                    if (is_object($value) || is_array($value)) {
                         $this->appendBindParam($col, json_encode($value), $index);
                     }
                     elseif (is_bool($value)) {
@@ -1198,6 +1198,7 @@ class Mokuyu
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
             return 0;
         } finally {
             $this->initQueryParams();
@@ -1859,7 +1860,7 @@ class Mokuyu
 
             return $this->exec($sql);
         } catch (QueryParamException $e) {
-
+            $this->errors[] = $e->getMessage();
             return 0;
         } finally {
             $this->initQueryParams();
