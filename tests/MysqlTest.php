@@ -7,6 +7,7 @@ use PDO;
 use Exception;
 use PDOException;
 use PDOStatement;
+use stdClass;
 
 class MysqlTest extends TestCase
 {
@@ -59,7 +60,7 @@ class MysqlTest extends TestCase
 
         //测试数组和对象和bool值
         $result = $this->db->abort(false)->table('article')->add([
-            'title' => new \stdClass(),
+            'title' => new stdClass(),
             'views' => false,
             'value' => [1, 2, 3],
         ]);
@@ -202,6 +203,27 @@ class MysqlTest extends TestCase
     }
 
     /**
+     * 测试tp的查询语法
+     */
+    public function testOperatorTp()
+    {
+        $this->assertCount(2, $this->db
+            ->table('article')
+            ->where(['article_id' => ['in', [1, 2]]])
+            ->select());
+        $this->assertCount(3, $this
+            ->db
+            ->table('article')
+            ->where(['article_id' => ['in', '1,2,3']])
+            ->select());
+        $this->assertCount(3, $this
+            ->db
+            ->table('article')
+            ->where(['article_id' => ['elt', 3]])
+            ->select());
+    }
+
+    /**
      * @param
      */
     public function testSelect()
@@ -214,15 +236,16 @@ class MysqlTest extends TestCase
             'article_id[~]'   => 1,
         ])->select());
         $this->assertEquals(0, $this->db->select());
-        $this->assertEquals(11, count($this->db->table('article')->limit(11)->select()));
+        $this->assertCount(11, $this->db->table('article')->limit(11)->select());
+
         //下面会返回41这一行
-        $this->assertEquals(1, count($this->db->table('article')
-                                              ->where('article_id', 40)
-                                              ->where('article_id', '<>', [40, 90])
-                                              ->whereOr('article_id', 41)
-                                              ->whereOr('article_id', '>=', 2)
-                                              ->fetchSql(false)
-                                              ->select()));
+        $this->assertCount(1, $this->db->table('article')
+                                       ->where('article_id', 40)
+                                       ->where('article_id', '<>', [40, 90])
+                                       ->whereOr('article_id', 41)
+                                       ->whereOr('article_id', '>=', 2)
+                                       ->fetchSql(false)
+                                       ->select());
         $this->assertCount(3, $this->db->table('article')->where('article_id', 'in', [31, 32, 33])->limit('0,3')->select());
         $this->assertCount(1, $this->db->table('article')->where(['article_id' => 91])->select());
         $this->assertCount(1, $this->db->table('article')->where('article_id>1')->where(['article_id' => 91, '_sql' => 'views>0'])->select());
@@ -499,6 +522,7 @@ class MysqlTest extends TestCase
             if ($lastInfo['article_id'] == 10) {
                 return false;
             }
+            return 0;
         }, null, 'asc');
         $this->assertEquals(10, $count);
 

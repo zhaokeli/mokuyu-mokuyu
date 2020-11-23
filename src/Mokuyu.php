@@ -402,32 +402,36 @@ class Mokuyu
      */
     public function delete($id = 0)
     {
+        try {
+            if (empty($this->queryParams['srcTable'])) {
+                return 0;
+            }
+            if (!$this->queryParams['where'] && $id !== true) {
+                if ($id === 0) {
+                    return 0;
+                }
+            }
+            if ($id && is_numeric($id)) {
+                $pk = $this->getPK();
+                if (!$pk) {
+                    return 0;
+                }
+                $this->where([$pk => $id]);
+            }
+            $this->buildSqlConf();
 
-        if (empty($this->queryParams['srcTable'])) {
+            $table = $this->queryParams['table'];
+            $where = $this->queryParams['where'];
+            $join  = $this->queryParams['join'];
+            if ($join) {
+                return $this->exec('DELETE ' . $table . '.* FROM ' . $table . $join . $where);
+            }
+            else {
+                return $this->exec('DELETE FROM ' . $table . $where);
+            }
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
             return 0;
-        }
-        if (!$this->queryParams['where'] && $id !== true) {
-            if ($id === 0) {
-                return 0;
-            }
-        }
-        if ($id && is_numeric($id)) {
-            $pk = $this->getPK();
-            if (!$pk) {
-                return 0;
-            }
-            $this->where([$pk => $id]);
-        }
-        $this->buildSqlConf();
-
-        $table = $this->queryParams['table'];
-        $where = $this->queryParams['where'];
-        $join  = $this->queryParams['join'];
-        if ($join) {
-            return $this->exec('DELETE ' . $table . '.* FROM ' . $table . $join . $where);
-        }
-        else {
-            return $this->exec('DELETE FROM ' . $table . $where);
         }
 
     }
@@ -587,22 +591,27 @@ class Mokuyu
      * @param string $field
      * @param int    $num
      * @param string $operation
-     * @return bool|false|int|string
+     * @return bool|int|string
      */
     public function fieldOperation(string $field, int $num = 0, string $operation = '+')
     {
-        $oper = ['+', '-', '*', '/'];
-        if (!in_array($operation, $oper)) {
-            return false;
-        }
-        $this->buildSqlConf();
-        $table = $this->queryParams['table'];
-        $where = $this->queryParams['where'];
-        if (empty($table) || empty($where)) {
-            return false;
-        }
+        try {
+            $oper = ['+', '-', '*', '/'];
+            if (!in_array($operation, $oper)) {
+                return false;
+            }
+            $this->buildSqlConf();
+            $table = $this->queryParams['table'];
+            $where = $this->queryParams['where'];
+            if (empty($table) || empty($where)) {
+                return false;
+            }
 
-        return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
+            return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return 0;
+        }
     }
 
     /**
@@ -626,68 +635,78 @@ class Mokuyu
      */
     public function get(int $id = 0)
     {
-        $this->limit(1);
-        //这个列要放这里取要不然请求过后配置就被清空啦
-        if (empty($this->queryParams['srcTable'])) {
-            return false;
-        }
-        //下面使用主键来查询
-        $pk = $this->getPK();
-        if ($pk && $id) {
-            $this->queryParams['where'] = [];
-            $this->where([$pk => $id]);
-        }
-        $cacheData = $this->getQueryCache();
-        $data      = null;
-        if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
-            $this->buildSqlConf();
-            //处理好后把这个字段保存下来,不然下面执行过后数据会被重置
-            $columns = $this->queryParams['field'];
-            $sql     = $this->buildSelect();
-            $query   = $this->query($sql);
-            if (!($query instanceof PDOStatement)) {
-                return $query ?: '';
+        try {
+            $this->limit(1);
+            //这个列要放这里取要不然请求过后配置就被清空啦
+            if (empty($this->queryParams['srcTable'])) {
+                return false;
             }
-            //如果列为字符串类型并且不为*
-            $is_single_column = (is_string($columns) && strpos($columns, ',') === false && $columns !== '*');
+            //下面使用主键来查询
+            $pk = $this->getPK();
+            if ($pk && $id) {
+                $this->queryParams['where'] = [];
+                $this->where([$pk => $id]);
+            }
+            $cacheData = $this->getQueryCache();
+            $data      = null;
+            if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
+                $this->buildSqlConf();
+                //处理好后把这个字段保存下来,不然下面执行过后数据会被重置
+                $columns = $this->queryParams['field'];
+                $sql     = $this->buildSelect();
+                $query   = $this->query($sql);
+                if (!($query instanceof PDOStatement)) {
+                    // return $query ?: '';
+                    throw new QueryResultException('', 0, null, $query ?: '');
+                }
+                //如果列为字符串类型并且不为*
+                $is_single_column = (is_string($columns) && strpos($columns, ',') === false && $columns !== '*');
 
-            if ($query) {
-                $data = $query->fetchAll(PDO::FETCH_ASSOC);
-                if (isset($data[0])) {
-                    if ($is_single_column) {
-                        //这个地方要处理几种情况
-                        if (strpos($columns, ' AS ') !== false) {
-                            //替换掉字段中的引号和 *** as 等字符
-                            $columns = preg_replace(['/' . $this->yinhao . '/', '/.*? AS /'], '', $columns);
-                        }
-                        elseif (preg_match('/^[a-zA-Z0-9_.' . $this->yinhao . ']+$/', $columns, $mat)) {
-                            //判断是不是合法的字段项，如果有表名去掉表名
-                            $columns = preg_replace(['/' . $this->yinhao . '/', '/^[\w]*\./i'], '', $columns);
-                        }
-                        // $columns=str_replace('')
+                if ($query) {
+                    $data = $query->fetchAll(PDO::FETCH_ASSOC);
+                    if (isset($data[0])) {
+                        if ($is_single_column) {
+                            //这个地方要处理几种情况
+                            if (strpos($columns, ' AS ') !== false) {
+                                //替换掉字段中的引号和 *** as 等字符
+                                $columns = preg_replace(['/' . $this->yinhao . '/', '/.*? AS /'], '', $columns);
+                            }
+                            elseif (preg_match('/^[a-zA-Z0-9_.' . $this->yinhao . ']+$/', $columns, $mat)) {
+                                //判断是不是合法的字段项，如果有表名去掉表名
+                                $columns = preg_replace(['/' . $this->yinhao . '/', '/^[\w]*\./i'], '', $columns);
+                            }
+                            // $columns=str_replace('')
 
-                        $data = $data[0][$columns];
+                            $data = $data[0][$columns];
+                        }
+                        else {
+                            $data = $data[0];
+                        }
                     }
                     else {
-                        $data = $data[0];
+                        $data = false;
                     }
                 }
                 else {
                     $data = false;
                 }
+                // if ($cacheData !== null) {
+                $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+                // }
+
             }
             else {
-                $data = false;
+                $data = $cacheData['data'];
             }
-            // if ($cacheData !== null) {
-            $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
-            // }
-
+            return $data;
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return false;
+        } catch (QueryResultException $e) {
+            return $e->getQueryResult();
+        } finally {
+            $this->initQueryParams();
         }
-        else {
-            $data = $cacheData['data'];
-        }
-        return $data;
     }
 
     /**
@@ -1024,14 +1043,19 @@ class Mokuyu
      */
     public function getWhere(array $data = []): array
     {
-        if ($data) {
-            $this->queryParams['where'] = $data;
-        }
-        $this->buildWhere();
-        $redata = [$this->queryParams['where'], $this->bindParam];
-        $this->initQueryParams();
+        try {
+            if ($data) {
+                $this->queryParams['where'] = $data;
+            }
+            $this->buildWhere();
+            $redata = [$this->queryParams['where'], $this->bindParam];
+            $this->initQueryParams();
 
-        return $redata;
+            return $redata;
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return [];
+        }
     }
 
     /**
@@ -1056,19 +1080,26 @@ class Mokuyu
      */
     public function has()
     {
-        $this->queryParams['LIMIT'] = ' LIMIT 1';
-        if (empty($this->queryParams['srcTable'])) {
-            return false;
-        }
-        $this->buildSqlConf();
-        $sql   = 'SELECT EXISTS(' . $this->buildSelect() . ')';
-        $query = $this->query($sql);
-        if (!($query instanceof PDOStatement)) {
-            return $query ?: false;
-        }
-        //取下一行,0列的数据
+        try {
+            $this->queryParams['LIMIT'] = ' LIMIT 1';
+            if (empty($this->queryParams['srcTable'])) {
+                return false;
+            }
+            $this->buildSqlConf();
+            $sql   = 'SELECT EXISTS(' . $this->buildSelect() . ')';
+            $query = $this->query($sql);
+            if (!($query instanceof PDOStatement)) {
+                return $query ?: false;
+            }
+            //取下一行,0列的数据
 
-        return $query->fetchColumn(0) == 1;
+            return $query->fetchColumn(0) == 1;
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return false;
+        } finally {
+            $this->initQueryParams();
+        }
     }
 
     /**
@@ -1311,10 +1342,10 @@ class Mokuyu
     }
 
     /**
-     * 返回指定分页的记录
+     * 设置页码和页大小
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param int     $page     当前页数
+     * @param int     $page     当前页码
      * @param integer $pageSize 分页大小
      * @return Mokuyu
      */
@@ -1324,56 +1355,68 @@ class Mokuyu
     }
 
     /**
-     * 自动分页
+     * 自动分页,返回分页数据
      * @DateTime 2019-12-31
      * @Author   mokuyu
-     * @param int $page
+     * @param int $page     当前页码
      * @param int $pageSize 分页大小
-     * @return array|bool [list=>[],count=>100]
+     * @return array|bool
      */
     public function paginate(int $page = 1, int $pageSize = 15)
     {
-        $temBak = [
-            'queryParams'  => $this->queryParams,
-            'bindParam'    => $this->bindParam,
-            'temFieldMode' => $this->temFieldMode,
-            'temTableMode' => $this->temTableMode,
-            'fieldMap'     => $this->fieldMap,
-            'isFetchSql'   => $this->isFetchSql,
-        ];
-        //统计数量时只需要第一个有效字段做为统计字段
-        $temField = $this->queryParams['field'];
-        if (is_string($temField)) {
-            $temField = explode(',', $temField);
-        }
-        if (count($temField) > 1) {
-            $temField[0] === '*' && ($temField = [$temField[1]]);
-        }
+        try {
+            $temBak = [
+                'queryParams'  => $this->queryParams,
+                'bindParam'    => $this->bindParam,
+                'temFieldMode' => $this->temFieldMode,
+                'temTableMode' => $this->temTableMode,
+                'fieldMap'     => $this->fieldMap,
+                'isFetchSql'   => $this->isFetchSql,
+            ];
+            //统计数量时只需要第一个有效字段做为统计字段
+            $temField = $this->queryParams['field'];
+            if (is_string($temField)) {
+                $temField = explode(',', $temField);
+            }
+            if (count($temField) > 1) {
+                $temField[0] === '*' && ($temField = [$temField[1]]);
+            }
 
-        $count = $this->field($temField[0])->count();
+            $count = $this->field($temField[0])->count();
 
-        //还原原有查询条件
-        foreach ($temBak as $key => $value) {
-            $this->$key = $value;
-        }
-        $this->page($page, $pageSize);
-        if (empty($this->queryParams['srcTable'])) {
-            return false;
-        }
-        $this->buildSqlConf();
-        $sql   = $this->buildSelect();
-        $query = $this->query($sql);
-        //调试时返回这些
-        if (!($query instanceof PDOStatement)) {
-            return $query ?: [];
-        }
+            //还原原有查询条件
+            foreach ($temBak as $key => $value) {
+                $this->$key = $value;
+            }
+            $this->page($page, $pageSize);
+            if (empty($this->queryParams['srcTable'])) {
+                return false;
+            }
+            $this->buildSqlConf();
+            $sql   = $this->buildSelect();
+            $query = $this->query($sql);
+            //调试时返回这些
+            if (!($query instanceof PDOStatement)) {
+                return $query ?: [];
+            }
 
-        return [
-            'list'     => $query->fetchAll(PDO::FETCH_ASSOC),
-            'count'    => $count,
-            'page'     => $page,
-            'pageSize' => $pageSize,
-        ];
+            return [
+                'list'     => $query->fetchAll(PDO::FETCH_ASSOC),
+                'count'    => $count,
+                'page'     => $page,
+                'pageSize' => $pageSize,
+            ];
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return [
+                'list'     => [],
+                'count'    => 0,
+                'page'     => $page,
+                'pageSize' => $pageSize,
+            ];
+        } finally {
+            $this->initQueryParams();
+        }
     }
 
     /**
@@ -1512,30 +1555,37 @@ class Mokuyu
      */
     public function select()
     {
-        if (empty($this->queryParams['srcTable'])) {
-            return false;
-        }
-        $cacheData = $this->getQueryCache();
-        if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
-            $this->buildSqlConf();
-            $sql   = $this->buildSelect();
-            $query = $this->query($sql);
-            //调试时返回这些
-            if (!($query instanceof PDOStatement)) {
-                $data = $query ?: [];
+        try {
+            if (empty($this->queryParams['srcTable'])) {
+                return false;
+            }
+            $cacheData = $this->getQueryCache();
+            if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
+                $this->buildSqlConf();
+                $sql   = $this->buildSelect();
+                $query = $this->query($sql);
+                //调试时返回这些
+                if (!($query instanceof PDOStatement)) {
+                    $data = $query ?: [];
+                }
+                else {
+                    $data = $query->fetchAll(PDO::FETCH_ASSOC);
+                }
+                // if ($cacheData !== null) {
+                $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+                // }
+                $cacheData = $data;
             }
             else {
-                $data = $query->fetchAll(PDO::FETCH_ASSOC);
+                $cacheData = $cacheData['data'];
             }
-            // if ($cacheData !== null) {
-            $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
-            // }
-            $cacheData = $data;
+            return $cacheData;
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return [];
+        } finally {
+            $this->initQueryParams();
         }
-        else {
-            $cacheData = $cacheData['data'];
-        }
-        return $cacheData;
     }
 
     /**
@@ -1578,9 +1628,9 @@ class Mokuyu
     }
 
     /**
-     * @param string      $field            返回的列,如果为*则返回所有字段
-     * @param string|null $key              索引key,做为数组的索引,为null时跟select一样
-     * @param bool        $isDeleteIndexKey 如果有多列数据,是否从数组中删除索引key列
+     * @param string|array $field            返回的列,如果为*则返回所有字段
+     * @param string|null  $key              索引key,做为数组的索引,为null时跟select一样
+     * @param bool         $isDeleteIndexKey 如果有多列数据,是否从数组中删除索引key列
      * @return array
      */
     public function column($field, string $key = null, bool $isDeleteIndexKey = false)
@@ -1886,6 +1936,7 @@ class Mokuyu
      * @param $field
      * @param $operator
      * @param $value
+     * @throws QueryParamException
      */
     protected function operatorMap(&$field, &$operator, &$value)
     {
@@ -1913,7 +1964,7 @@ class Mokuyu
             $value = explode(',', $value);
         }
         if (!isset($map[$operator])) {
-            throw new InvalidArgumentException('Operation not exists');
+            throw new QueryParamException('Operation not exists');
         }
         $field = $field . $map[$operator];
     }
@@ -1928,7 +1979,11 @@ class Mokuyu
     public function where($data, $value = null, $value2 = null)
     {
         if ($value2 !== null) {
-            $this->operatorMap($data, $value, $value2);
+            try {
+                $this->operatorMap($data, $value, $value2);
+            } catch (QueryParamException $e) {
+                $this->errors[] = $e->getMessage();
+            }
             $data = [$data => $value2];
         }
         elseif ($value !== null && is_string($data)) {
@@ -1963,7 +2018,11 @@ class Mokuyu
     public function whereOr($data, $value = null, $value2 = null)
     {
         if ($value2 !== null) {
-            $this->operatorMap($data, $value, $value2);
+            try {
+                $this->operatorMap($data, $value, $value2);
+            } catch (QueryParamException $e) {
+                $this->errors[] = $e->getMessage();
+            }
             $data = [$data => $value2];
         }
         elseif ($value !== null && is_string($data)) {
@@ -2172,11 +2231,11 @@ class Mokuyu
             ];
 
             foreach ($data as $sub_table => $relation) {
-                preg_match('/(\[\s*?(?<operator><|>|><|<>)\s*?\])?(?<tableName>[a-zA-Z0-9_\-]*)\s?(\((?<alias>[a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
-                //                preg_match('/(\[\s*?(\<|\>|\>\<|\<\>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
-                if ($match[2] != '' && $match[3] != '') {
-                    $joinString    = $join_array[$match[2]];
-                    $joinTableName = $this->prefix . $this->parseName($match[3]);
+                preg_match('/(\[\s*?(?<operator><|>|><|<>)\s*?])?(?<tableName>[a-zA-Z0-9_\-]*)\s?(\((?<alias>[a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
+                // preg_match('/(\[\s*?(\<|\>|\>\<|\<\>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
+                if ($match['operator'] != '' && $match['tableName'] != '') {
+                    $joinString    = $join_array[$match['operator']];
+                    $joinTableName = $this->prefix . $this->parseName($match['tableName']);
                     if (is_string($relation)) {
                         $info     = $this->parseFormatField($relation);
                         $relation = 'USING (' . $this->yinhao . $info['field'] . $this->yinhao . ')';
@@ -2212,7 +2271,7 @@ class Mokuyu
                             $relation = 'ON ' . implode(' AND ', $joins);
                         }
                     }
-                    $table_name = $this->tablePrefix($match[3]) . ' ';
+                    $table_name = $this->tablePrefix($match['tableName']) . ' ';
                     if (isset($match[5])) {
                         $table_name .= 'AS ' . $this->tablePrefix($match[5]) . ' ';
                     }
@@ -2444,13 +2503,13 @@ class Mokuyu
     /**
      * 解析where条件格式
      * @return void
+     * @throws QueryParamException
      */
     protected function buildWhere(): void
     {
         $data = $this->queryParams['where'];
         if (!$data) {
             $this->queryParams['where'] = '';
-
             return;
         }
         //这里不能转为小写不然就没法加下划线啦
@@ -2548,10 +2607,6 @@ class Mokuyu
     protected function cacheAction(string $key, $value = null, int $expire = 3600 * 24)
     {
         try {
-
-            // if (!isset($this->cacheKeys[$key])) {
-            //     $this->cacheKeys[$key] = true;
-            // }
             if ($this->debug || $this->cache === null) {
                 return null;
             }
@@ -2783,6 +2838,7 @@ class Mokuyu
      * @param string $field
      * @param        $value
      * @return string
+     * @throws QueryParamException
      */
     protected function parseOperator(string $field, $value): string
     {
@@ -2841,8 +2897,9 @@ class Mokuyu
 
                     }
                     else {
-                        $this->appendBindParam($col0, $value[0]);
-                        $this->appendBindParam($col1, $value[1]);
+                        // $this->appendBindParam($col0, $value[0]);
+                        // $this->appendBindParam($col1, $value[1]);
+                        throw new QueryParamException('<> >< 操作符参数必需为数字类型');
                     }
                     $tdata = '(' . $column . ' BETWEEN ' . $col0 . ' AND ' . $col1 . ' )';
                 }
@@ -2850,7 +2907,8 @@ class Mokuyu
 
             if ($operator == '~' || $operator == '!~') {
                 if (!$value) {
-                    return '';
+                    // return '';
+                    throw new QueryParamException('like条件参数不能为空');
                 }
                 $val = $value;
                 if (!is_array($val)) {
@@ -2880,15 +2938,16 @@ class Mokuyu
 
             if (in_array($operator, ['>', '>=', '<', '<='])) {
 
-                if (is_numeric($value)) {
-                    $this->appendBindParam($col, $value);
+                if (!is_numeric($value)) {
+                    // $this->appendBindParam($col, $value);
+                    throw new QueryParamException('> >= < <=操作符参数必需为数字类型');
                 }
-                elseif (strpos($field, '#') === 0) {
-                    $this->appendBindParam($col, $value);
-                }
-                else {
-                    $this->appendBindParam($col, $value);
-                }
+                // elseif (strpos($field, '#') === 0) {
+                //     $this->appendBindParam($col, $value);
+                // }
+                // else {
+                $this->appendBindParam($col, $value);
+                // }
                 $condition = $column . ' ' . $operator . ' ' . $col;
                 $tdata     = $condition;
             }
@@ -3022,88 +3081,97 @@ class Mokuyu
      * @param string $func
      * @param array  $field
      * @return int|mixed
-     * @throws QueryParamException
      */
     protected function summary(string $func, array $field)
     {
-        //如果之前通过field方法传过字段就设置上去，*为默认,排除
-        if ($this->queryParams['field'] && $this->queryParams['field'] !== '*') {
-            if (is_string($this->queryParams['field'])) {
-                $field = explode(',', $this->queryParams['field']);
+        try {
+            //如果之前通过field方法传过字段就设置上去，*为默认,排除
+            if ($this->queryParams['field'] && $this->queryParams['field'] !== '*') {
+                if (is_string($this->queryParams['field'])) {
+                    $field = explode(',', $this->queryParams['field']);
+                }
+                else {
+                    $field = $this->queryParams['field'];
+                }
+
+            }
+            $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
+            if (!isset($arr[$func]) || !$this->queryParams['table']) {
+                throw new QueryParamException('统计方法或数据表为空');
+                // return 0;
+            }
+            //如果是count的话把排序去掉,否则字段中有别名时可能会出错
+            if ($func === 'COUNT') {
+                $this->queryParams['order'] = '';
+            }
+
+            //字段转成数组
+            if (count($field) == 1) {
+                if (is_array($field[0])) {
+                    $field = $field[0];
+                }
+                else {
+                    $field = explode(',', $field[0]);
+                }
+            }
+
+            //给字段加上函数
+            $obj = $this;
+            array_walk($field, function (&$value) use ($func, $obj) {
+                $info = $obj->parseFormatField($value);
+                $fie  = $info['field'];
+                if ($info['srcTable']) {
+                    $fie = $info['srcTable'] . '.' . $fie;
+                }
+                if ($info['func']) {
+                    $value = $func . '(' . $info['func'] . '(' . $fie . ')' . ')';
+                }
+                else {
+                    $value = $func . '(' . $fie . ')';
+                }
+                $value .= ' AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
+            });
+
+            //重新设置查询字段
+            $this->field($field);
+            if ($this->queryParams['group']) {
+                //如果有分组去重的话会有多条记录,需要放到子sql中统计
+                // $map  = $this->getWhere();
+                $this->buildSqlConf();
+                $sql   = $this->buildSelect();
+                $query = $this->query('SELECT ' . implode(',', $field) . ' FROM (' . $sql . ') tem');
+                $data  = $query->fetchAll(PDO::FETCH_ASSOC);
             }
             else {
-                $field = $this->queryParams['field'];
+                $data = $this->select();
             }
 
-        }
-        $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
-        if (!isset($arr[$func]) || !$this->queryParams['table']) {
-            return 0;
-        }
-        //如果是count的话把排序去掉,否则字段中有别名时可能会出错
-        if ($func === 'COUNT') {
-            $this->queryParams['order'] = '';
-        }
-
-        //字段转成数组
-        if (count($field) == 1) {
-            if (is_array($field[0])) {
-                $field = $field[0];
+            if (is_string($data) || is_numeric($data) || !$data) {
+                throw new QueryResultException('success', 0, null, $data ?: 0);
             }
-            else {
-                $field = explode(',', $field[0]);
+            // if (!$data) {
+            // return 0;
+            // throw new QueryResultException('success', 0, null, 0);
+            // }
+            if (count($field) === 1) {
+                //单个字段的统计直接返回
+                $info = $this->parseFormatField($field[0]);
+                $fie  = $info['alias'] ?: $info['field'];
+
+                $data = $data[0][$fie] ?: 0;
+                // throw new QueryResultException('success', 0, null, $data[0][$fie] ?: 0);
+                // return array_sum(array_column($data, $fie));
+
             }
-        }
-
-        //给字段加上函数
-        $obj = $this;
-        array_walk($field, function (&$value) use ($func, $obj) {
-            $info = $obj->parseFormatField($value);
-            $fie  = $info['field'];
-            if ($info['srcTable']) {
-                $fie = $info['srcTable'] . '.' . $fie;
-            }
-            if ($info['func']) {
-                $value = $func . '(' . $info['func'] . '(' . $fie . ')' . ')';
-            }
-            else {
-                $value = $func . '(' . $fie . ')';
-            }
-            $value .= ' AS ' . ($info['field'] === '*' ? 'num' : $info['field']);
-        });
-
-        //重新设置查询字段
-        $this->field($field);
-        if ($this->queryParams['group']) {
-            //如果有分组去重的话会有多条记录,需要放到子sql中统计
-            // $map  = $this->getWhere();
-            $this->buildSqlConf();
-            $sql   = $this->buildSelect();
-            $query = $this->query('SELECT ' . implode(',', $field) . ' FROM (' . $sql . ') tem');
-            $data  = $query->fetchAll(PDO::FETCH_ASSOC);
-        }
-        else {
-            $data = $this->select();
-        }
-
-        if (is_string($data) || is_numeric($data)) {
-            return $data ?: 0;
-        }
-        if (!$data) {
-            return 0;
-        }
-        if (count($field) === 1) {
-            //单个字段的统计直接返回
-            $info = $this->parseFormatField($field[0]);
-            $fie  = $info['alias'] ?: $info['field'];
-
-            return $data[0][$fie] ?: 0;
-            // return array_sum(array_column($data, $fie));
-
-        }
-        else {
+            // else {
             //多个字段就返回数组
             return $data ?: 0;
+            // }
+        } catch (QueryResultException $e) {
+            return $e->getQueryResult();
+        } catch (QueryParamException $e) {
+            $this->errors[] = $e->getMessage();
+            return 0;
         }
     }
 
