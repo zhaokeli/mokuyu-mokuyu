@@ -2140,6 +2140,9 @@ class Mokuyu
         }
     }
 
+    /**
+     * @throws QueryParamException
+     */
     protected function buildJoin()
     {
         $data = $this->queryParams['join'];
@@ -2169,7 +2172,7 @@ class Mokuyu
             ];
 
             foreach ($data as $sub_table => $relation) {
-                preg_match('/(\[\s*?(<|>|><|<>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
+                preg_match('/(\[\s*?(?<operator><|>|><|<>)\s*?\])?(?<tableName>[a-zA-Z0-9_\-]*)\s?(\((?<alias>[a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
                 //                preg_match('/(\[\s*?(\<|\>|\>\<|\<\>)\s*?\])?([a-zA-Z0-9_\-]*)\s?(\(([a-zA-Z0-9_\-]*)\))?/', $sub_table, $match);
                 if ($match[2] != '' && $match[3] != '') {
                     $joinString    = $join_array[$match[2]];
@@ -2386,6 +2389,7 @@ class Mokuyu
     /**
      * 根据当前配置生成一个select语句
      * @return string
+     * @throws QueryParamException
      */
     protected function buildSelect(): string
     {
@@ -2399,7 +2403,7 @@ class Mokuyu
         $group = $map['group'];
         $index = $map['forceIndex'];
         if ((empty($table) && empty($join)) || (empty($field) && empty($join))) {
-            return '';
+            throw new QueryParamException('数据表不能为空');
         }
         $sql = '';
         switch ($this->databaseType) {
@@ -2415,6 +2419,9 @@ class Mokuyu
 
     }
 
+    /**
+     * @throws QueryParamException
+     */
     protected function buildSqlConf()
     {
         $this->buildTable();
@@ -2705,33 +2712,33 @@ class Mokuyu
 
         //查看是不是有数据表
         preg_match('/(\(JSON\)\s*|^#)?(?<tableName>[a-zA-Z0-9_]*)\.(?<field>[a-zA-Z0-9_]*)/', $field, $column_match);
-        if (isset($column_match[2], $column_match[3])) {
+        if (isset($column_match['tableName'], $column_match['field'])) {
             //有数据表的情况下
-            $arr['srcTable'] = $this->parseName($column_match[2]);
+            $arr['srcTable'] = $this->parseName($column_match['tableName']);
             $arr['table']    = $this->prefix . $arr['srcTable'];
-            $arr['field']    = $column_match[3];
+            $arr['field']    = $column_match['field'];
         }
         //从函数中count(user)取出真正的字段字段值
-        preg_match('/([^\s]+)\s*\(\s*([a-zA-Z0-9_\-.*]*?)\s*\)/', $field, $matfun);
-        if (isset($matfun[1])) {
-            $arr['field'] || ($arr['field'] = $matfun[2]); //字段
-            $arr['func'] = $matfun[1];                     //函数
+        preg_match('/(?<funcName>[^\s]+)\s*\(\s*(?<field>[a-zA-Z0-9_\-.*]*?)\s*\)/', $field, $matfun);
+        if (isset($matfun['funcName'])) {
+            $arr['field'] || ($arr['field'] = $matfun['field']);    //字段
+            $arr['func'] = $matfun['funcName'];                     //函数
             //从原有字符串中把 (user) 换成占位符
             // $field_str = str_replace($matfun[0], '__ZHANWEIFU__', $field_str);
         }
         //如果匹配的话,填充的数组是一样的
         if (stripos($field, ' as ') !== false) {
             //正则出有as的这种情况
-            preg_match('/([a-zA-Z0-9_\-.()]*)\s*as\s*([a-zA-Z0-9_\-.()]*)/i', $field, $match);
+            preg_match('@(?<field>[a-zA-Z0-9_\-.()]*)\s*as\s*(?<alias>[a-zA-Z0-9_\-.()]*)@i', $field, $match);
         }
         else {
             //正则出  User.name[nickname] 这种情况
-            preg_match('/([a-zA-Z0-9_\-.()]*)\s*\[([a-zA-Z0-9_\-]*)\]/i', $field, $match);
+            preg_match('@(?<field>[a-zA-Z0-9_\-.()]*)\s*\[(?<alias>[a-zA-Z0-9_\-]*)]@i', $field, $match);
         }
-        if (isset($match[1], $match[2])) {
+        if (isset($match['field'], $match['alias'])) {
             // 符合User.name[nickname]/ as 这两种别名情况
-            $arr['field'] || ($arr['field'] = $match[1]);
-            $arr['alias'] = $match[2];
+            $arr['field'] || ($arr['field'] = $match['field']);
+            $arr['alias'] = $match['alias'];
         }
         $arr['field'] || ($arr['field'] = $field);
         //转成真实字段
@@ -3015,6 +3022,7 @@ class Mokuyu
      * @param string $func
      * @param array  $field
      * @return int|mixed
+     * @throws QueryParamException
      */
     protected function summary(string $func, array $field)
     {
@@ -3067,7 +3075,7 @@ class Mokuyu
         //重新设置查询字段
         $this->field($field);
         if ($this->queryParams['group']) {
-            //如果有分组去复的话会有多条记录,需要放到子sql中统计
+            //如果有分组去重的话会有多条记录,需要放到子sql中统计
             // $map  = $this->getWhere();
             $this->buildSqlConf();
             $sql   = $this->buildSelect();

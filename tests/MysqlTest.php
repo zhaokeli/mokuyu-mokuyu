@@ -253,12 +253,45 @@ class MysqlTest extends TestCase
      */
     public function testSummary()
     {
-        $this->assertEquals(199, $this->db->table('Article')->where('article_id', '<>', [198, 200])->avg('article_id'));
-        $this->assertEquals(3, $this->db->table('Article')->where('article_id', '<>', [198, 200])->count());
-        $this->assertEquals(1, $this->db->table('Article')->min('article_id'));
-        $this->assertEquals(60, $this->db->table('Article')->where('article_id', '<=', 60)->max('article_id'));
-        $this->assertEquals(399, $this->db->table('Article')->where('article_id', '<>', [199, 200])->sum('article_id'));
-        $this->db->table('Article')->order('article_id desc')->rand()->group('views')->get();
+        $this->assertEquals(199, $this->db
+            ->table('Article')
+            ->where('article_id', '<>', [198, 200])
+            ->avg('article_id'));
+        $this->assertEquals(3, $this
+            ->db
+            ->table('Article')
+            ->where('article_id', '<>', [198, 200])
+            ->count());
+        $this->assertEquals(1, $this
+            ->db
+            ->table('Article')
+            ->min(['article_id']));
+        $this->assertGreaterThan(10, $this->db
+            ->field(['distinct(article.views)'])
+            ->table('Article')
+            ->count());
+
+        $this->assertIsArray($this->db
+            ->group('views')
+            ->table('Article')
+            ->count('views,title'));
+
+        $this->assertEquals(60, $this
+            ->db
+            ->table('Article')
+            ->where('article_id', '<=', 60)
+            ->max('article_id'));
+        $this->assertEquals(399, $this
+            ->db
+            ->table('Article')
+            ->where('article_id', '<>', [199, 200])
+            ->sum('article_id'));
+        $this->db
+            ->table('Article')
+            ->order('article_id desc')
+            ->rand()
+            ->group('views')
+            ->get();
     }
 
     public function testDebug()
