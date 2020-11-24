@@ -498,7 +498,7 @@ class Mokuyu
             }
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
-            $this->appendSqlLogs(($t2 - $t1), $sql, $this->bindParam);
+            $this->appendSqlLogs(($t2 - $t1), $sql);
             //因为exec执行的命令除了 select insert update外不一定会有影响的行数,下面判断执行的状态码
             if (!$result
                 && stripos(trim($sql), 'select') !== 0
@@ -1470,7 +1470,7 @@ class Mokuyu
             }
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
-            $this->appendSqlLogs(($t2 - $t1), $sql, $this->bindParam);
+            $this->appendSqlLogs(($t2 - $t1), $sql);
             if ($pdo->errorCode() != '00000') {
                 $this->errors[] = $pdo->errorInfo()[2];
                 $this->showError(end($this->errors));
@@ -2142,12 +2142,11 @@ class Mokuyu
     }
 
     /**
-     * sql请示日志
+     * sql请求日志
      * @param float  $rtime
      * @param string $sql
-     * @param array  $params
      */
-    protected function appendSqlLogs(float $rtime, string $sql, array $params): void
+    protected function appendSqlLogs(float $rtime, string $sql): void
     {
         $class = $rtime > 1 ? 'style="color:#f00";' : '';
         $rtime = str_pad((round($rtime, 6)) . '', 8, '0');
