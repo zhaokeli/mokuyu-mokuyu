@@ -430,7 +430,7 @@ class Mokuyu
                 return $this->exec('DELETE FROM ' . $table . $where);
             }
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return 0;
         }
 
@@ -442,7 +442,7 @@ class Mokuyu
      * @Author   mokuyu
      * @return array
      */
-    public function error()
+    public function error(): array
     {
         return $this->errors;
     }
@@ -609,7 +609,7 @@ class Mokuyu
 
             return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return 0;
         }
     }
@@ -700,7 +700,7 @@ class Mokuyu
             }
             return $data;
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return false;
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
@@ -1053,7 +1053,7 @@ class Mokuyu
 
             return $redata;
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return [];
         }
     }
@@ -1095,7 +1095,7 @@ class Mokuyu
 
             return $query->fetchColumn(0) == 1;
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return false;
         } finally {
             $this->initQueryParams();
@@ -1229,7 +1229,7 @@ class Mokuyu
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return 0;
         } finally {
             $this->initQueryParams();
@@ -1407,7 +1407,7 @@ class Mokuyu
                 'pageSize' => $pageSize,
             ];
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return [
                 'list'     => [],
                 'count'    => 0,
@@ -1494,6 +1494,10 @@ class Mokuyu
         }
     }
 
+    /**
+     * 随机排序
+     * @return $this
+     */
     public function rand()
     {
         $this->queryParams['rand'] = true;
@@ -1581,7 +1585,7 @@ class Mokuyu
             }
             return $cacheData;
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return [];
         } finally {
             $this->initQueryParams();
@@ -1910,7 +1914,7 @@ class Mokuyu
 
             return $this->exec($sql);
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return 0;
         } finally {
             $this->initQueryParams();
@@ -1982,7 +1986,7 @@ class Mokuyu
             try {
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
-                $this->errors[] = $e->getMessage();
+                $this->appendErrorLogs($e->getMessage());
             }
             $data = [$data => $value2];
         }
@@ -2021,7 +2025,7 @@ class Mokuyu
             try {
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
-                $this->errors[] = $e->getMessage();
+                $this->appendErrorLogs($e->getMessage());
             }
             $data = [$data => $value2];
         }
@@ -2139,6 +2143,15 @@ class Mokuyu
             $this->bindParam[$index][$key] = $value;
         }
 
+    }
+
+    /**
+     * 追加错误日志
+     * @param string $message
+     */
+    protected function appendErrorLogs(string $message)
+    {
+        $this->errors[] = $message;
     }
 
     /**
@@ -2715,8 +2728,10 @@ class Mokuyu
         else {
             $info = $this->parseFormatField($field);
         }
-        //* 不能加引号,不然会报错
-        $field = $info['field'] === '*' ? $info['field'] : $this->yinhao . $info['field'] . $this->yinhao;
+        // 如果字段中有+-*/ 则为字段运算或全部字段，故不能加引号,
+        $field = preg_match('@[+\-*/]@', $info['field']) ?
+            $info['field'] : $this->yinhao . $info['field'] . $this->yinhao;
+
         if ($info['table']) {
             $field = $this->yinhao . $info['table'] . $this->yinhao . '.' . $field;
         }
@@ -2759,13 +2774,13 @@ class Mokuyu
         ];
         //解析字段中 age[>]这一类的标识识,#使用数据库函数
         //             if (preg_match('/(#?)([\w\(\)\.\-]+)(\[\s*?(\>|\>\=|\<|\<\=|\!|\<\>|\>\<|\!?~)\s*?\])/i', $field, $match)) {
-        if (preg_match('@(#?)(?<field>[\w().\-]+)(\[\s*?(?<rightOperator>\+|-|\*|/|>|>=|<|<=|!|<>|><|!?~)\s*?])@i', $field, $match)) {
+        if (preg_match('@(#?)(?<field>[\w().\-_*+/]+)(\[\s*?(?<rightOperator>\+|-|\*|/|>|>=|<|<=|!|<>|><|!?~)\s*?])@i', $field, $match)) {
             $arr['field']         = $match['field'];
             $arr['rightOperator'] = $match['rightOperator'];
         }
 
         //查看是不是有数据表
-        preg_match('/(\(JSON\)\s*|^#)?(?<tableName>[a-zA-Z0-9_]*)\.(?<field>[a-zA-Z0-9_]*)/', $field, $column_match);
+        preg_match('@(\(JSON\)\s*|^#)?(?<tableName>[a-zA-Z0-9_]*)\.(?<field>[a-zA-Z0-9_*\-+/]*)@', $field, $column_match);
         if (isset($column_match['tableName'], $column_match['field'])) {
             //有数据表的情况下
             $arr['srcTable'] = $this->parseName($column_match['tableName']);
@@ -2773,7 +2788,7 @@ class Mokuyu
             $arr['field']    = $column_match['field'];
         }
         //从函数中count(user)取出真正的字段字段值
-        preg_match('/(?<funcName>[^\s]+)\s*\(\s*(?<field>[a-zA-Z0-9_\-.*]*?)\s*\)/', $field, $matfun);
+        preg_match('@(?<funcName>[^\s]+)\s*\(\s*(?<field>[a-zA-Z0-9_\-.*+/]*?)\s*\)@', $field, $matfun);
         if (isset($matfun['funcName'])) {
             $arr['field'] || ($arr['field'] = $matfun['field']);    //字段
             $arr['func'] = $matfun['funcName'];                     //函数
@@ -2783,11 +2798,11 @@ class Mokuyu
         //如果匹配的话,填充的数组是一样的
         if (stripos($field, ' as ') !== false) {
             //正则出有as的这种情况
-            preg_match('@(?<field>[a-zA-Z0-9_\-.()]*)\s*as\s*(?<alias>[a-zA-Z0-9_\-.()]*)@i', $field, $match);
+            preg_match('@(?<field>[a-zA-Z0-9_\-.()+*/]*)\s*as\s*(?<alias>[a-zA-Z0-9_\-.()]*)@i', $field, $match);
         }
         else {
             //正则出  User.name[nickname] 这种情况
-            preg_match('@(?<field>[a-zA-Z0-9_\-.()]*)\s*\[(?<alias>[a-zA-Z0-9_\-]*)]@i', $field, $match);
+            preg_match('@(?<field>[a-zA-Z0-9_\-.()+*/]*)\s*\[(?<alias>[a-zA-Z0-9_\-]*)]@i', $field, $match);
         }
         if (isset($match['field'], $match['alias'])) {
             // 符合User.name[nickname]/ as 这两种别名情况
@@ -3096,7 +3111,7 @@ class Mokuyu
             }
             $arr = array_flip(['COUNT', 'AVG', 'MAX', 'MIN', 'SUM']);
             if (!isset($arr[$func]) || !$this->queryParams['table']) {
-                throw new QueryParamException('统计方法或数据表为空');
+                throw new QueryParamException('统计方法或数据表不能为空');
                 // return 0;
             }
             //如果是count的话把排序去掉,否则字段中有别名时可能会出错
@@ -3117,6 +3132,11 @@ class Mokuyu
             //给字段加上函数
             $obj = $this;
             array_walk($field, function (&$value) use ($func, $obj) {
+                //如果字段中的运算符就直接返回
+                if (preg_match('@[+\-*/]@', $value)) {
+                    $value = $func . '(' . $value . ') AS num';
+                    return;
+                }
                 $info = $obj->parseFormatField($value);
                 $fie  = $info['field'];
                 if ($info['srcTable']) {
@@ -3169,7 +3189,7 @@ class Mokuyu
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
-            $this->errors[] = $e->getMessage();
+            $this->appendErrorLogs($e->getMessage());
             return 0;
         }
     }

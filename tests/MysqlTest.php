@@ -280,15 +280,16 @@ class MysqlTest extends TestCase
             ->table('Article')
             ->where('article_id', '<>', [198, 200])
             ->avg('article_id'));
-        $this->assertEquals(3, $this
-            ->db
+
+        $this->assertEquals(3, $this->db
             ->table('Article')
             ->where('article_id', '<>', [198, 200])
             ->count());
-        $this->assertEquals(1, $this
-            ->db
+
+        $this->assertEquals(1, $this->db
             ->table('Article')
             ->min(['article_id']));
+
         $this->assertGreaterThan(10, $this->db
             ->field(['distinct(article.views)'])
             ->table('Article')
@@ -299,22 +300,52 @@ class MysqlTest extends TestCase
             ->table('Article')
             ->count('views,title'));
 
-        $this->assertEquals(60, $this
-            ->db
+        $this->assertEquals(60, $this->db
             ->table('Article')
             ->where('article_id', '<=', 60)
             ->max('article_id'));
-        $this->assertEquals(399, $this
-            ->db
+
+        $this->assertEquals(399, $this->db
             ->table('Article')
             ->where('article_id', '<>', [199, 200])
             ->sum('article_id'));
+
         $this->db
             ->table('Article')
             ->order('article_id desc')
             ->rand()
             ->group('views')
             ->get();
+
+
+    }
+
+    /**
+     * 测试字段运算符
+     */
+    public function testSummaryYunsuan()
+    {
+        $this->updateViews(30, 30);
+        $this->updateViews(40, 40);
+        $this->assertEquals(140, $this->db
+            ->table('Article')
+            ->where('article_id', 'in', [30, 40])
+            ->sum('views+article_id'));
+
+        $this->assertEquals(80, $this->db
+            ->table('Article')
+            ->where('article_id', 'in', [30, 40])
+            ->max('views+article_id'));
+
+        $this->assertEquals(60, $this->db
+            ->table('Article')
+            ->where('article_id', 'in', [30, 40])
+            ->min('views+article_id'));
+
+        $this->assertEquals(1600, $this->db
+            ->table('Article')
+            ->where('article_id', 'in', [30, 40])
+            ->max('views*article_id'));
     }
 
     public function testDebug()
@@ -325,7 +356,6 @@ class MysqlTest extends TestCase
 
     public function testOther()
     {
-        $this->db->clearCache();
         $this->db->getLastError();
         $this->db->getLastSql();
         $this->assertInstanceOf(PDO::class, $this->db->getPDO());
@@ -381,11 +411,19 @@ class MysqlTest extends TestCase
 
     public function testQueryCache()
     {
+        $this->db->debug(true);
         $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
         $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
-        $this->assertEquals(1, $this->db->getCacheHits());
+        $this->assertEquals(0, $this->db->getCacheHits());
+        $this->db->debug(false);
+        $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
+        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
+        $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
+        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
+        $this->assertEquals(4, $this->db->getCacheHits());
+        //$this->db->clearCache();
     }
 
     /**
