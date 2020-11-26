@@ -1858,7 +1858,8 @@ class Mokuyu
 
                     $col    = ':' . $info['field'];
                     $column = $this->yinhao . $info['field'] . $this->yinhao;
-                    if ($info['table']) {
+                    //如果字段前带表前缀,并且join条件为真的话就加上表,否则忽略表
+                    if ($info['table'] && $this->queryParams['join']) {
                         $col    .= '_' . $info['table'];
                         $column = $this->yinhao . $info['table'] . $this->yinhao . '.' . $column;
                     }

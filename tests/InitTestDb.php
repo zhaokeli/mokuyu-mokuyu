@@ -6,17 +6,76 @@ use PDOException;
 use mokuyu\database\Mokuyu;
 use PDO;
 use mokuyu\Cache;
+use mokuyu\CacheException;
 
 class InitTestDb
 {
-    protected static $instance    = null;
-    protected static $pdoInstance = null;
-    protected static $initialized = false;
+    protected static $mysqlInstance  = null;
+    protected static $sqliteInstance = null;
+    protected static $pdoInstance    = null;
+    protected static $initialized    = false;
 
-    public static function getDb()
+    public static function getSqliteDb()
     {
-        if (self::$instance === null) {
-            self::$instance = new Mokuyu([
+        if (self::$sqliteInstance === null) {
+            //初始化后会自动创建数据库文件
+            self::$sqliteInstance = new Mokuyu([
+                // 必须配置项
+                'database_type' => 'sqlite',
+                'database_file' => __DIR__ . '/../test.db',
+                'charset'       => 'utf8',
+                // 可选，定义表的前缀
+                'prefix'        => 'kl_',
+            ]);
+            //创建一个表
+            self::$sqliteInstance->exec('
+DROP TABLE IF EXISTS "main"."kl_article";
+CREATE TABLE "kl_article" (
+"article_id"  INTEGER PRIMARY KEY AUTOINCREMENT,
+"title"  text,
+"views"  INTEGER NOT NULL DEFAULT 0,
+"create_time"  INTEGER NOT NULL DEFAULT 0,
+"update_time"  INTEGER NOT NULL DEFAULT 0
+);
+DROP TABLE IF EXISTS "main"."kl_category";
+CREATE TABLE "main"."kl_category" (
+  "category_id" INTEGER NOT NULL DEFAULT 0,
+  "title" TEXT NOT NULL DEFAULT \'\',
+  PRIMARY KEY ("category_id")
+);
+');
+            try {
+                self::$sqliteInstance->setCache(new Cache([
+                    // 缓存类型为File
+                    'type'     => 'redis', //目前支持file和memcache redis
+                    'memcache' => [
+                        'host' => 'localhost',
+                        'port' => 11211,
+                    ],
+                    'redis'    => [
+                        'host'     => '127.0.0.1',
+                        'port'     => 6379,
+                        'index'    => 7,
+                        'password' => 'adminrootkl',
+                    ],
+                    // 全局缓存有效期（0为永久有效）
+                    'expire'   => 24 * 3600,
+                    // 缓存前缀
+                    'prefix'   => 'mokuyu_db',
+                    // 缓存目录
+                    'path'     => '/datacache',
+                ]));
+            } catch (CacheException $e) {
+            }
+            self::initSqliteDatabase();
+        }
+        return self::$sqliteInstance;
+    }
+
+    public static function getMysqlDb()
+    {
+        if (self::$mysqlInstance === null) {
+            self::$mysqlInstance = new Mokuyu([
                 // 必须配置项
                 'database_type' => 'mysql',
                 'database_name' => $_ENV['test_database_name'],
@@ -31,29 +90,32 @@ class InitTestDb
                 // 可选，定义表的前缀
                 'prefix'        => $_ENV['test_prefix'],
             ]);
-            self::$instance->setCache(new Cache([
-                // 缓存类型为File
-                'type'     => 'redis', //目前支持file和memcache redis
-                'memcache' => [
-                    'host' => 'localhost',
-                    'port' => 11211,
-                ],
-                'redis'    => [
-                    'host'     => '127.0.0.1',
-                    'port'     => 6379,
-                    'index'    => 7,
-                    'password' => 'adminrootkl',
-                ],
-                // 全局缓存有效期（0为永久有效）
-                'expire'   => 24 * 3600,
-                // 缓存前缀
-                'prefix'   => 'mokuyu_db',
-                // 缓存目录
-                'path'     => '/datacache',
-            ]));
-            self::initDatabase();
+            try {
+                self::$mysqlInstance->setCache(new Cache([
+                    // 缓存类型为File
+                    'type'     => 'redis', //目前支持file和memcache redis
+                    'memcache' => [
+                        'host' => 'localhost',
+                        'port' => 11211,
+                    ],
+                    'redis'    => [
+                        'host'     => '127.0.0.1',
+                        'port'     => 6379,
+                        'index'    => 7,
+                        'password' => 'adminrootkl',
+                    ],
+                    // 全局缓存有效期（0为永久有效）
+                    'expire'   => 24 * 3600,
+                    // 缓存前缀
+                    'prefix'   => 'mokuyu_db',
+                    // 缓存目录
+                    'path'     => '/datacache',
+                ]));
+            } catch (CacheException $e) {
+            }
+            self::initMysqlDatabase();
         }
-        return self::$instance;
+        return self::$mysqlInstance;
     }
 
     public static function getPdo()
@@ -75,7 +137,28 @@ class InitTestDb
         return self::$pdoInstance;
     }
 
-    private static function initDatabase()
+
+    /**
+     * 初始sqlite数据库
+     */
+    private static function initSqliteDatabase()
+    {
+        //批量添加数据
+        $datanum = 200;
+        $datas   = [];
+        while (--$datanum >= 0) {
+            $datas[] = [
+                'title'       => 'this is php data!' . rand(100, 1000),
+                'category_id' => rand(1, 3),
+                'views'       => rand(100, 1000),
+                'create_time' => time(),
+                'update_time' => time(),
+            ];
+        }
+        $result = self::$sqliteInstance->abort(false)->table('article')->add($datas);
+    }
+
+    private static function initMysqlDatabase()
     {
         if (self::$initialized) {
             return;
@@ -118,8 +201,8 @@ eot;
                 'views'       => rand(100, 1000),
             ];
         }
-        $result            = self::$instance->abort(false)->table('article')->add($datas);
-        $result            = self::$instance->abort(false)->table('Category')->add([
+        $result            = self::$mysqlInstance->abort(false)->table('article')->add($datas);
+        $result            = self::$mysqlInstance->abort(false)->table('Category')->add([
             [
                 'title' => '软件下载',
             ],

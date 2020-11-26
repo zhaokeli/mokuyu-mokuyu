@@ -9,13 +9,13 @@ use PDOException;
 use PDOStatement;
 use stdClass;
 
-class MysqlTest extends TestCase
+class MysqlTest extends Base
 {
-    protected $db = null;
+
 
     public function setUp(): void
     {
-        $this->db = InitTestDb::getDb();
+        $this->db = InitTestDb::getMysqlDb();
     }
 
     public function testAddSql()
@@ -411,19 +411,20 @@ class MysqlTest extends TestCase
 
     public function testQueryCache()
     {
-        $this->db->debug(true);
-        $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
-        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
-        $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
-        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
-        $this->assertEquals(0, $this->db->getCacheHits());
+        $this->db->clearCache();
         $this->db->debug(false);
         $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
         $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
-        $this->assertEquals(4, $this->db->getCacheHits());
-        //$this->db->clearCache();
+        //这一次为查询字段缓存命中
+        $this->assertEquals(1, $this->db->getCacheHits());
+        $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
+        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
+        $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();
+        $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
+        $this->assertEquals(5, $this->db->getCacheHits());
+        $this->db->clearCache();
     }
 
     /**
@@ -521,27 +522,6 @@ class MysqlTest extends TestCase
     }
 
     /**
-     * 返回文章浏览量
-     * @param $articleId
-     * @return array|bool|mixed|PDOStatement|string
-     */
-    private function getViews($articleId)
-    {
-        return $this->db->table('article')->where('article_id', $articleId)->field('views')->get();
-    }
-
-    /**
-     * 更新文件浏览量
-     * @param     $articleId
-     * @param int $views
-     * @return bool|int|string
-     */
-    private function updateViews($articleId, $views = 0)
-    {
-        return $this->db->table('article')->where('article_id', $articleId)->update(['views' => $views]);
-    }
-
-    /**
      * 测试遍历功能
      */
     public function testChunk()
@@ -566,12 +546,12 @@ class MysqlTest extends TestCase
 
         $lastId = 0;
         $count  = 0;
-        $this->db->table('article')->chunk(50, function ($datas) use (&$lastId, &$count) {
+        $this->db->table('article')->where('article_id', '<', 200)->chunk(50, function ($datas) use (&$lastId, &$count) {
             $lastInfo = end($datas);
             $lastId   = $lastInfo['article_id'];
             $count++;
         }, null, 'asc');
-        $this->assertEquals($this->db->table('article')->max('article_id'), $lastId);
+        $this->assertEquals($this->db->where('article_id', '<', 200)->table('article')->max('article_id'), $lastId);
         $this->assertEquals(4, $count);
 
         $lastId = 1;

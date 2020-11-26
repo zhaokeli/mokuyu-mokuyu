@@ -11,7 +11,7 @@ class ModelTest extends TestCase
 
     public function setUp(): void
     {
-        $this->db = InitTestDb::getDb();
+        $this->db = InitTestDb::getMysqlDb();
     }
 
     public function testAppend()
