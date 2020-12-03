@@ -1856,6 +1856,12 @@ class Mokuyu
                         continue;
                     }
 
+                    //如果join不为空的话就把字段默认加上第一个表为前缀
+                    if ($this->queryParams['join'] && !$info['table']) {
+                        $info['table'] = trim($this->queryParams['table'], $this->yinhao);
+                        $this->buildJoin();
+                    }
+
                     $col    = ':' . $info['field'];
                     $column = $this->yinhao . $info['field'] . $this->yinhao;
                     //如果字段前带表前缀,并且join条件为真的话就加上表,否则忽略表
@@ -1871,12 +1877,6 @@ class Mokuyu
                         $fields[] = $fie . ' = ' . $fie . ' ' . $info['rightOperator'] . ' ' . $col;
                     }
                     else {
-                        //如果join不为空的话就把字段默认加上第一个表为前缀
-                        if ($this->queryParams['join'] && !$info['table']) {
-                            $info['table'] = trim($this->queryParams['table'], $this->yinhao);
-                            $this->buildJoin();
-                        }
-
                         // if (is_null($value)) {
                         //     // $fields[] = $column . ' = NULL';
                         //     $this->appendBindParam($col, $value, $index);
