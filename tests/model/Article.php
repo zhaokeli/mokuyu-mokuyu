@@ -8,14 +8,14 @@ use mokuyu\database\Model;
 
 class Article extends Model
 {
-    protected $fieldMap
+    protected array $fieldMap
         = [
             //格式为 别名(查询)字段=>数据库真实字段
             'push_time' => 'create_time',
         ];
 
-    protected $tableName = 'Article';
-    protected $append
+    protected       $tableName = 'Article';
+    protected array $append
                          = [
             'view_text',
         ];

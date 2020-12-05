@@ -31,63 +31,63 @@ class Mokuyu
      * query中绑定的参数数组
      * @var array
      */
-    protected $bindParam = [];
+    protected array $bindParam = [];
 
     /**
      * 缓存对象,要实现CacheInterface接口,保存表字段加快速度
-     * @var CacheInterface
+     * @var CacheInterface|null
      */
-    protected $cache = null;
+    protected ?CacheInterface $cache = null;
 
     /**
      * 数据库数据集
      * @var string
      */
-    protected $charset = 'utf8';
+    protected string $charset = 'utf8';
 
     /**
      * sqlite数据文件
      * @var string
      */
-    protected $databaseFile = '';
+    protected string $databaseFile = '';
 
     /**
      * 数据库名字
      * @var string
      */
-    protected $databaseName = '';
+    protected string $databaseName = '';
 
     /**
      * 数据库连接相关信息
      * @var string
      */
-    protected $databaseType = '';
+    protected string $databaseType = '';
 
     /**
      * 开启调式,关闭后如果有缓存缓存会缓存主键,表字段等信息
      * @var boolean
      */
-    protected $debug = false;
+    protected bool $debug = false;
 
     /**
      * 错误信息保存
      * @var array
      */
-    protected $errors = [];
+    protected array $errors = [];
 
     /**
      * 缓存命中多少次
      * @var int
      */
-    protected $cacheHits = 0;
+    protected int $cacheHits = 0;
 
     /**
      * 字段映射
      * 格式为 别名(查询)字段=>数据库真实字段
      * 场景：文章表中字段为create_time,但想使用add_time去查询,做映射后就可以使用add_time查询,不映射则会提示add_time不存在
-     * @var
+     * @var array
      */
-    protected $fieldMap
+    protected array $fieldMap
         = [
             //格式为 别名(查询)字段=>数据库真实字段
             // 'push_time' => 'create_time',
@@ -96,44 +96,44 @@ class Mokuyu
     /**
      * 设置当前数据表字段风格,传入的字段会转为此种风格后再去查询,fieldMap中设置的(别名/真实)字段同样会被转换
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
-     * @var null
+     * @var int
      */
-    protected $fieldMode = 0;
+    protected int $fieldMode = 0;
 
     /**
      * 数据库配置
      * @var array
      */
-    protected $hostList = [];
+    protected array $hostList = [];
 
     /**
      * 中断调试，会直接中断并输出当前sql语句
      * @var boolean
      */
-    protected $isAbort = false;
+    protected bool $isAbort = false;
 
     /**
      * 是否返回sql语句,true则返回语句,false返回对应的数据
      * @var boolean
      */
-    protected $isFetchSql = false;
+    protected bool $isFetchSql = false;
 
     /**
      * 所有执行过的sql语句
      * @var array
      */
-    protected $logs = [];
+    protected array $logs = [];
 
     /**
      * 事务启动次数,事务嵌套时用
      * @var int
      */
-    private $transTimes = 0;
+    private int $transTimes = 0;
     /**
      * pdo配置项
-     * @var
+     * @var array
      */
-    protected $options
+    protected array $options
         = [
             // 抛出 exceptions 异常。
             PDO::ATTR_ERRMODE           => PDO::ERRMODE_EXCEPTION,
@@ -151,56 +151,56 @@ class Mokuyu
 
     /**
      * 数据库密码
-     * @var string
+     * @var string|null
      */
-    protected $password = '';
+    protected ?string $password = '';
 
     /**
      * 端口
      * @var int
      */
-    protected $port;
+    protected int $port;
 
     /**
      * 数据库前缀
      * @var string
      */
-    protected $prefix = '';
+    protected string $prefix = '';
 
     /**
      * 每次执行请求的SQL参数组合
      * @var array
      */
-    protected $queryParams = [];
+    protected array $queryParams = [];
 
     /**
      * 数据库连接服务器
      * @var string
      */
-    protected $server = '';
+    protected string $server = '';
 
     // For SQLite
-    protected $socket = '';
+    protected string $socket = '';
 
     /**
      * 数据表风格,把传入的表名转为下面
      * 前提:前缀还是要加的
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
-     * @var null
+     * @var int
      */
-    protected $tableMode = 1;
+    protected int $tableMode = 1;
 
     /**
      * 用户名
-     * @var string
+     * @var string|null
      */
-    protected $username = '';
+    protected ?string $username = '';
 
     /**
      * 关键字引号
      * @var string
      */
-    protected $yinhao = '"';
+    protected string $yinhao = '"';
 
     /**
      * 开启缓存后保存的缓存key列表
@@ -212,13 +212,13 @@ class Mokuyu
      * 字段风格
      * @var integer
      */
-    private $temFieldMode = 0;
+    private int $temFieldMode = 0;
 
     /**
      * 数据表风格
      * @var integer
      */
-    private $temTableMode = 0;
+    private int $temTableMode = 0;
 
     /**
      * 初始化连接
@@ -262,7 +262,7 @@ class Mokuyu
      * @param       $name
      * @return PDO
      */
-    public function __get($name)
+    public function __get($name): PDO
     {
         if ($name === 'pdoWrite') {
             $this->pdoWrite = $this->buildPDO($this->hostList['w'][array_rand($this->hostList['w'])]);
@@ -280,8 +280,8 @@ class Mokuyu
             return $this->pdoRead;
         }
 
-        return $this->$name;
-        // throw new PDOException('Method is not exist: ' . $name, 1);
+        // return $this->$name;
+        throw new PDOException('Property is not exist: ' . $name, 1);
     }
 
     /**
@@ -291,7 +291,7 @@ class Mokuyu
      * @param bool $isAbort
      * @return Mokuyu
      */
-    public function abort(bool $isAbort = true)
+    public function abort(bool $isAbort = true): Mokuyu
     {
         $this->isAbort = $isAbort;
 
@@ -383,7 +383,7 @@ class Mokuyu
      * @param null $debug
      * @return bool|null
      */
-    public function debug($debug = null)
+    public function debug($debug = null): ?bool
     {
         if ($debug !== null) {
             $this->debug = $debug;
@@ -534,7 +534,7 @@ class Mokuyu
      * @param bool $bo
      * @return Mokuyu
      */
-    public function fetchSql(bool $bo = true)
+    public function fetchSql(bool $bo = true): Mokuyu
     {
         $this->isFetchSql = $bo;
 
@@ -546,7 +546,7 @@ class Mokuyu
      * @param string|array $field
      * @return $this
      */
-    public function field($field)
+    public function field($field): Mokuyu
     {
         $this->queryParams['field'] = $field;
 
@@ -560,7 +560,7 @@ class Mokuyu
      * @param array $map
      * @return Mokuyu
      */
-    public function fieldMap(array $map)
+    public function fieldMap(array $map): Mokuyu
     {
         $this->fieldMap = $map;
 
@@ -574,7 +574,7 @@ class Mokuyu
      * @param integer $type
      * @return Mokuyu
      */
-    public function fieldMode(int $type = 0)
+    public function fieldMode(int $type = 0): Mokuyu
     {
         if ($type > 2 || $type < 0) {
             throw new InvalidArgumentException('fieldMode must be numeric(0,1,2)!');
@@ -621,7 +621,7 @@ class Mokuyu
      * @param string $field
      * @return Mokuyu
      */
-    public function forceIndex(string $field)
+    public function forceIndex(string $field): Mokuyu
     {
         $this->queryParams['forceIndex'] = $field;
 
@@ -690,10 +690,7 @@ class Mokuyu
                 else {
                     $data = false;
                 }
-                // if ($cacheData !== null) {
                 $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
-                // }
-
             }
             else {
                 $data = $cacheData['data'];
@@ -869,7 +866,7 @@ class Mokuyu
      * @Author   mokuyu
      * @return mixed|string|null
      */
-    public function getPK()
+    public function getPK(): ?string
     {
         try {
             if (empty($this->queryParams['srcTable'])) {
@@ -1065,7 +1062,7 @@ class Mokuyu
      * @param string $data
      * @return Mokuyu
      */
-    public function group(string $data)
+    public function group(string $data): Mokuyu
     {
         $this->queryParams['group'] = $data;
 
@@ -1093,7 +1090,7 @@ class Mokuyu
             }
             //取下一行,0列的数据
 
-            return $query->fetchColumn(0) == 1;
+            return $query->fetchColumn() == 1;
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
             return false;
@@ -1108,7 +1105,7 @@ class Mokuyu
      * @Author   mokuyu
      * @return array|null
      */
-    public function info()
+    public function info(): ?array
     {
         $val = $this->cacheAction('db_version_info');
         if ($val) {
@@ -1242,7 +1239,7 @@ class Mokuyu
      * @param array $data
      * @return Mokuyu
      */
-    public function join(array $data)
+    public function join(array $data): Mokuyu
     {
         $this->queryParams['join'] = $data;
 
@@ -1255,7 +1252,7 @@ class Mokuyu
      * @param null|int     $end
      * @return $this
      */
-    public function limit($start, $end = null)
+    public function limit($start, $end = null): Mokuyu
     {
         if (is_null($end)) {
             if (is_array($start) && count($start) >= 2) {
@@ -1304,7 +1301,7 @@ class Mokuyu
         return $this;
     }
 
-    public function log()
+    public function log(): array
     {
         return $this->logs;
     }
@@ -1334,7 +1331,7 @@ class Mokuyu
      * @param string|array $data
      * @return $this
      */
-    public function order($data)
+    public function order($data): Mokuyu
     {
         $this->queryParams['order'] = $data;
 
@@ -1349,7 +1346,7 @@ class Mokuyu
      * @param integer $pageSize 分页大小
      * @return Mokuyu
      */
-    public function page(int $page = 1, int $pageSize = 15)
+    public function page(int $page = 1, int $pageSize = 15): Mokuyu
     {
         return $this->limit(($page - 1) * $pageSize, $pageSize);
     }
@@ -1498,7 +1495,7 @@ class Mokuyu
      * 随机排序
      * @return $this
      */
-    public function rand()
+    public function rand(): Mokuyu
     {
         $this->queryParams['rand'] = true;
 
@@ -1519,7 +1516,7 @@ class Mokuyu
      * @Author   mokuyu
      * @return bool
      */
-    public function rollback()
+    public function rollback(): bool
     {
         return (bool)$this->pdoWrite->exec('ROLLBACK TO SAVEPOINT dbback_' . $this->transTimes--);
     }
@@ -1719,7 +1716,7 @@ class Mokuyu
 
     public function setInc(string $field, int $num = 1)
     {
-        return $this->fieldOperation($field, $num, '+');
+        return $this->fieldOperation($field, $num);
     }
 
     /**
@@ -1732,7 +1729,7 @@ class Mokuyu
         return $this->summary('SUM', $field);
     }
 
-    public function table(string $name)
+    public function table(string $name): Mokuyu
     {
         $this->queryParams['table']    = $name;
         $this->queryParams['srcTable'] = $name;
@@ -1740,7 +1737,7 @@ class Mokuyu
         return $this;
     }
 
-    public function tableMode(int $type = 0)
+    public function tableMode(int $type = 0): Mokuyu
     {
         if ($type > 3 || $type < 0) {
             throw new InvalidArgumentException('tableMode must be numeric(0,1,2,3)!');
@@ -1929,7 +1926,7 @@ class Mokuyu
      * @param bool $isUse
      * @return Mokuyu
      */
-    public function useWriteConn(bool $isUse = true)
+    public function useWriteConn(bool $isUse = true): Mokuyu
     {
         $this->queryParams['useWriteConn'] = $isUse;
 
@@ -1981,7 +1978,7 @@ class Mokuyu
      * @param null         $value2 值
      * @return $this
      */
-    public function where($data, $value = null, $value2 = null)
+    public function where($data, $value = null, $value2 = null): Mokuyu
     {
         if ($value2 !== null) {
             try {
@@ -2020,7 +2017,7 @@ class Mokuyu
      * @param null $value2
      * @return $this
      */
-    public function whereOr($data, $value = null, $value2 = null)
+    public function whereOr($data, $value = null, $value2 = null): Mokuyu
     {
         if ($value2 !== null) {
             try {
@@ -2053,7 +2050,7 @@ class Mokuyu
      * @param int        $expire    过期时间
      * @return Mokuyu
      */
-    public function cache($keyOrTime, int $expire = 10 * 60)
+    public function cache($keyOrTime, int $expire = 10 * 60): Mokuyu
     {
         if (is_numeric($keyOrTime)) {
             $this->queryParams['queryCache'] = [
@@ -2073,7 +2070,7 @@ class Mokuyu
     /**
      * 取当前的查询缓存、格式为数组：缓存数据、key、过期时间，缓存数据为null时为无缓存
      */
-    protected function getQueryCache()
+    protected function getQueryCache(): ?array
     {
         if ($this->cache === null || $this->queryParams['queryCache'] === null || $this->isFetchSql || $this->isAbort) {
             return null;
@@ -2296,7 +2293,7 @@ class Mokuyu
         }
     }
 
-    protected function buildOrder()
+    protected function buildOrder(): Mokuyu
     {
         if ($this->queryParams['rand'] === true) {
             $order = ' RANDOM() ';
@@ -2506,7 +2503,7 @@ class Mokuyu
 
     }
 
-    protected function buildTable()
+    protected function buildTable(): Mokuyu
     {
         $this->queryParams['table'] = $this->tablePrefix($this->queryParams['table']);
 
@@ -2585,9 +2582,9 @@ class Mokuyu
             $str3 .= empty($str3) ? $ts : (' AND ' . $ts);
         }
         $arr = [];
-        $str1 && ($arr[] = $str1);
-        $str2 && ($arr[] = $str2);
-        $str3 && ($arr[] = $str3);
+        if ($str1) $arr[] = $str1;
+        if ($str2) $arr[] = $str2;
+        if ($str3) $arr[] = $str3;
         $resql = implode(') AND (', $arr);
         $resql = '(' . $resql . ')';
         $resql = $resql == '()' ? '' : $resql;
@@ -3065,13 +3062,13 @@ class Mokuyu
     protected function parseTable(string $table): string
     {
         if ($this->temTableMode === 1) {
-            $table = $this->parseName($table, 1);
+            $table = $this->parseName($table);
         }
         elseif ($this->temTableMode === 2) {
             $table = $this->parseName($table, 3);
         }
         elseif ($this->temTableMode === 3) {
-            $table = strtoupper($this->parseName($table, 1));
+            $table = strtoupper($this->parseName($table));
         }
 
         return $table;

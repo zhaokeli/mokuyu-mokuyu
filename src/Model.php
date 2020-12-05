@@ -82,40 +82,40 @@ abstract class Model
      * 下面插入和更新自动处理规则跟这里一样
      * @var array
      */
-    protected $auto = [];
+    protected array $auto = [];
 
     /**
      * 添加数据时自动处理指定字段,处理规则和auto一至
      * @var array
      */
-    protected $insert = [];
+    protected array $insert = [];
 
     /**
      * 更新数据时自动处理指定字段,处理规则和auto一至
      * @var array
      */
-    protected $update = [];
+    protected array $update = [];
 
     /**
      * 在插入数据前拦截并删除指定字段
      * @var array
      */
-    protected $beforeInsertDelete = [];
+    protected array $beforeInsertDelete = [];
 
     /**
      * 在更新前拦截并删除指定字段
      * @var array
      */
-    protected $beforeUpdateDelete = [];
+    protected array $beforeUpdateDelete = [];
 
     /**
-     * @var null 数据库连接对象
+     * @var Mokuyu|null 数据库连接对象
      */
-    protected $db = null;
+    protected ?Mokuyu $db = null;
 
     /**
      * 查询字段,如果使用字段映射(fieldMap)的话,请使用字段的别名
-     * @var array
+     * @var mixed
      */
     protected $field = [];
 
@@ -125,7 +125,7 @@ abstract class Model
      * 场景：文章表中字段为create_time,但想使用add_time去查询,做映射后就可以使用add_time查询,不映射则会提示add_time不存在
      * @var array
      */
-    protected $fieldMap
+    protected array $fieldMap
         = [
             //格式为 别名(查询)字段=>数据库真实字段
             // 'push_time' => 'create_time',
@@ -134,28 +134,28 @@ abstract class Model
     /**
      * 设置当前数据表字段风格,传入的字段会转为此种风格后再去查询,fieldMap中设置的(别名/真实)字段同样会被转换
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
-     * @var null
+     * @var int
      */
-    protected $fieldMode = 0;
+    protected int $fieldMode = 0;
 
 
     /**
      * 模型默认的联表查询条件
      * @var array
      */
-    protected $join = [];
+    protected array $join = [];
 
     /**
      * 模型默认的limit条件
      * @var string
      */
-    protected $limit = '';
+    protected string $limit = '';
 
     /**
      * 模型默认的排序
      * @var string
      */
-    protected $order = '';
+    protected string $order = '';
 
     /**
      * 此模型绑定的表,如果为空则自动按当前类名处理
@@ -167,20 +167,20 @@ abstract class Model
      * 默认查询条件
      * @var array
      */
-    protected $where = [];
+    protected array $where = [];
 
     /**
      * 数据表风格,把传入的表名转为下面
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
-     * @var null
+     * @var int
      */
-    protected $tableMode = 1;
+    protected int $tableMode = 1;
 
     /**
      * 追加字段/属性
      * @var array
      */
-    protected $append = [];
+    protected array $append = [];
 
     /**
      * 初始化模型

@@ -21,7 +21,7 @@ $db = new \mokuyu\database\Mokuyu([
  */
 class User extends \mokuyu\database\Model
 {
-    protected $fieldMap
+    protected array $fieldMap
         = [
             //格式为 别名(查询)字段=>数据库真实字段
             'push_time' => 'create_time',
