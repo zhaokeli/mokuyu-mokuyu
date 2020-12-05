@@ -159,9 +159,9 @@ abstract class Model
 
     /**
      * 此模型绑定的表,如果为空则自动按当前类名处理
-     * @var string|string[]|null
+     * @var string|null
      */
-    protected $tableName = null;
+    protected ?string $tableName = null;
 
     /**
      * 默认查询条件
