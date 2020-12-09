@@ -14,13 +14,13 @@ class Article extends Model
             'push_time' => 'create_time',
         ];
 
-    protected       $tableName = 'Article';
-    protected array $append
-                         = [
+    protected ?string $tableName = 'Article';
+    protected array   $append
+                                 = [
             'view_text',
         ];
 
-    public function getViewTextAttr($data)
+    public function getViewTextAttr($data): int
     {
         if ($data['views'] > 10) {
             return 10000;

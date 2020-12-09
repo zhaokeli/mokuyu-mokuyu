@@ -1,83 +1,85 @@
 # Mokuyu数据库操作
+
 <!-- TOC -->
 
 - [Mokuyu数据库操作](#mokuyu数据库操作)
-  - [安装方法](#安装方法)
-    - [composer](#composer)
-    - [手动安装](#手动安装)
-  - [使用规则说明](#使用规则说明)
-    - [数据库表/字段](#数据库表字段)
-    - [特别注意/解析规则](#特别注意解析规则)
-    - [功能亮点和要求](#功能亮点和要求)
-  - [连接数据库](#连接数据库)
-    - [连接mysql](#连接mysql)
-    - [连接pgsql](#连接pgsql)
-    - [连接sqlite](#连接sqlite)
-  - [查询条件连贯操作](#查询条件连贯操作)
-    - [fieldMap(array map)](#fieldmaparray-map)
-    - [fieldMode(int type=0)](#fieldmodeint-type0)
-    - [tableMode(int type=0)](#tablemodeint-type0)
-    - [forceIndex(string field)](#forceindexstring-field)
-    - [useWriteConn()](#usewriteconn)
-    - [field(string/array fields)](#fieldstringarray-fields)
-    - [where(string/array)](#wherestringarray)
-    - [whereOr(string/array)](#whereorstringarray)
-    - [limit(start,end=null)](#limitstartendnull)
-    - [order(string/array)](#orderstringarray)
-    - [rand()](#rand)
-    - [group(string data)](#groupstring-data)
-    - [page(int page=1,int pageSize=15)](#pageint-page1int-pagesize15)
-    - [join(array data)](#joinarray-data)
-  - [执行查询并返回结果](#执行查询并返回结果)
-    - [select():array](#selectarray)
-    - [column($field, string $key = null, bool $isDeleteIndexKey = false)](#columnfield-string-key--null-bool-isdeleteindexkey--false)
-    - [chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')](#chunkint-count-closure-callback-string-sortfield--null-string-sorttype--asc)
-    - [insert(array datas):int](#insertarray-datasint)
-    - [update(array datas):int](#updatearray-datasint)
-    - [delete(int id=0):int](#deleteint-id0int)
-    - [save(array datas):int](#savearray-datasint)
-    - [get([int id = 0]):array/string](#getint-id--0arraystring)
-    - [has():boolean](#hasboolean)
-    - [paginate(int page=1,int pageSize=15):array](#paginateint-page1int-pagesize15array)
-    - [min(...string field):int/array](#minstring-fieldintarray)
-    - [max(...string field):int/array](#maxstring-fieldintarray)
-    - [avg(...string field):int/array](#avgstring-fieldintarray)
-    - [sum(...string field):int/array](#sumstring-fieldintarray)
-    - [count(string field):int](#countstring-fieldint)
-  - [其它信息获取](#其它信息获取)
-    - [getPK():string](#getpkstring)
-    - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
-    - [getQueryParams():array](#getqueryparamsarray)
-    - [getFields():array](#getfieldsarray)
-  - [执行原生SQL](#执行原生sql)
-    - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
-    - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
-  - [数据的增删改](#数据的增删改)
-    - [添加数据](#添加数据)
-    - [更新数据](#更新数据)
-    - [删除数据](#删除数据)
-  - [字段操作](#字段操作)
-    - [setInc(string fiela,int num=1):int](#setincstring-fielaint-num1int)
-    - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
-    - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
-  - [事务处理](#事务处理)
-    - [beginTransaction()](#begintransaction)
-    - [transaction(Closure callback)](#transactionclosure-callback)
-  - [调试](#调试)
-    - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
-    - [debug(isDebug=null)](#debugisdebugnull)
-    - [abort(bool isAbort=true)](#abortbool-isaborttrue)
-    - [getLastSql():string](#getlastsqlstring)
-    - [getLastError():string](#getlasterrorstring)
-    - [log():array](#logarray)
-    - [info():array](#infoarray)
-  - [其它功能](#其它功能)
-    - [setCache(CacheInterface obj): void](#setcachecacheinterface-obj-void)
-    - [setBindParam(array value): void](#setbindparamarray-value-void)
-    - [getWhere(array data = []):array](#getwherearray-data--array)
-  - [SQLite示例](#sqlite示例)
+    - [安装方法](#安装方法)
+        - [composer](#composer)
+        - [手动安装](#手动安装)
+    - [使用规则说明](#使用规则说明)
+        - [数据库表/字段](#数据库表字段)
+        - [特别注意/解析规则](#特别注意解析规则)
+        - [功能亮点和要求](#功能亮点和要求)
+    - [连接数据库](#连接数据库)
+        - [连接mysql](#连接mysql)
+        - [连接pgsql](#连接pgsql)
+        - [连接sqlite](#连接sqlite)
+    - [查询条件连贯操作](#查询条件连贯操作)
+        - [fieldMap(array map)](#fieldmaparray-map)
+        - [fieldMode(int type=0)](#fieldmodeint-type0)
+        - [tableMode(int type=0)](#tablemodeint-type0)
+        - [forceIndex(string field)](#forceindexstring-field)
+        - [useWriteConn()](#usewriteconn)
+        - [field(string/array fields)](#fieldstringarray-fields)
+        - [where(string/array)](#wherestringarray)
+        - [whereOr(string/array)](#whereorstringarray)
+        - [limit(start,end=null)](#limitstartendnull)
+        - [order(string/array)](#orderstringarray)
+        - [rand()](#rand)
+        - [group(string data)](#groupstring-data)
+        - [page(int page=1,int pageSize=15)](#pageint-page1int-pagesize15)
+        - [join(array data)](#joinarray-data)
+    - [执行查询并返回结果](#执行查询并返回结果)
+        - [select():array](#selectarray)
+        - [column($field, string $key = null, bool $isDeleteIndexKey = false)](#columnfield-string-key--null-bool-isdeleteindexkey--false)
+        - [chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')](#chunkint-count-closure-callback-string-sortfield--null-string-sorttype--asc)
+        - [insert(array datas):int](#insertarray-datasint)
+        - [update(array datas):int](#updatearray-datasint)
+        - [delete(int id=0):int](#deleteint-id0int)
+        - [save(array datas):int](#savearray-datasint)
+        - [get([int id = 0]):array/string](#getint-id--0arraystring)
+        - [has():boolean](#hasboolean)
+        - [paginate(int page=1,int pageSize=15):array](#paginateint-page1int-pagesize15array)
+        - [min(...string field):int/array](#minstring-fieldintarray)
+        - [max(...string field):int/array](#maxstring-fieldintarray)
+        - [avg(...string field):int/array](#avgstring-fieldintarray)
+        - [sum(...string field):int/array](#sumstring-fieldintarray)
+        - [count(string field):int](#countstring-fieldint)
+    - [其它信息获取](#其它信息获取)
+        - [getPK():string](#getpkstring)
+        - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
+        - [getQueryParams():array](#getqueryparamsarray)
+        - [getFields():array](#getfieldsarray)
+    - [执行原生SQL](#执行原生sql)
+        - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
+        - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
+    - [数据的增删改](#数据的增删改)
+        - [添加数据](#添加数据)
+        - [更新数据](#更新数据)
+        - [删除数据](#删除数据)
+    - [字段操作](#字段操作)
+        - [setInc(string fiela,int num=1):int](#setincstring-fielaint-num1int)
+        - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
+        - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
+    - [事务处理](#事务处理)
+        - [beginTransaction()](#begintransaction)
+        - [transaction(Closure callback)](#transactionclosure-callback)
+    - [调试](#调试)
+        - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
+        - [debug(isDebug=null)](#debugisdebugnull)
+        - [abort(bool isAbort=true)](#abortbool-isaborttrue)
+        - [getLastSql():string](#getlastsqlstring)
+        - [getLastError():string](#getlasterrorstring)
+        - [log():array](#logarray)
+        - [info():array](#infoarray)
+    - [其它功能](#其它功能)
+        - [setCache(CacheInterface obj): void](#setcachecacheinterface-obj-void)
+        - [setBindParam(array value): void](#setbindparamarray-value-void)
+        - [getWhere(array data = []):array](#getwherearray-data--array)
+    - [SQLite示例](#sqlite示例)
 
 <!-- /TOC -->
+
 ## 安装方法
 
 ### composer
@@ -107,7 +109,7 @@ include __dir__.'/CacheInterface.php';
 * 字段名单词间用下划线分隔，或使用驼峰命名,不能混写
 * 每个表都要有主键，主键名字格式为: 表名(不带前缀)_id,
 
->如果字段没有按下面的规范写,可以使用字段映射来一一对应，以上规范为强烈建议，非强制使用
+> 如果字段没有按下面的规范写,可以使用字段映射来一一对应，以上规范为强烈建议，非强制使用
 
 ### 特别注意/解析规则
 
@@ -135,6 +137,7 @@ $db = new \mokuyu\database\Mokuyu([
   'password'      => '******,****',//如果长度和server不够以最后一个为准
   'port'          => '3306,3306',//如果长度和server不够以最后一个为准
   'charset'       => 'utf8',
+  'break_reconnect'=>false,//是否断线重连
   /**
    *  可选参数
    * 字段风格,把传入的字段转为下面,也可以在查询时使用fieldMode()设置临时风格
@@ -186,7 +189,9 @@ $db = new \mokuyu\database\Mokuyu([
 ```
 
 ## 查询条件连贯操作
+
 >
+
 ``` php
 $db->table('user')
     ->field('user_id,username')
@@ -198,8 +203,7 @@ $db->table('user')
 
 ### fieldMap(array map)
 
-字段映射
-设置查询字段和数据库真实字段的映射
+字段映射 设置查询字段和数据库真实字段的映射
 
 ``` php
 [
@@ -280,19 +284,19 @@ $map['_sql']=[
 ];
 ```
 
-查询条件有两种方式添加
-第一种在字段上添加标识符如下
+查询条件有两种方式添加 第一种在字段上添加标识符如下
 >
+
 * field=>100
-* field[>]=>100 ====  field>100
-* field[>=]=>100 ====  field>=100
-* field[!]=>100 ====  field!=100
-* field[<>]=>[100,200] ====  field BETWEEN 100 AND 200
-* field[><]=>[100,200] ====  field NOT BETWEEN 100 AND 200
-* field[~]=>'%stss' ====  field like '%stss'
-* field[~]=>['%stss','stss%'] ====  field like '%stss' OR field like 'stss%'
-* field[>]=>100 ====  field>100
-* field[>]=>100 ====  field>100
+* field[>]=>100 ==== field>100
+* field[>=]=>100 ==== field>=100
+* field[!]=>100 ==== field!=100
+* field[<>]=>[100,200] ==== field BETWEEN 100 AND 200
+* field[><]=>[100,200] ==== field NOT BETWEEN 100 AND 200
+* field[~]=>'%stss' ==== field like '%stss'
+* field[~]=>['%stss','stss%'] ==== field like '%stss' OR field like 'stss%'
+* field[>]=>100 ==== field>100
+* field[>]=>100 ==== field>100
 
 第二种，使用数组中传标识符
 
@@ -319,13 +323,11 @@ where or连接的另一种添加方式
 
 ### order(string/array)
 
-参数为字符串(user_id desc,username desc)也可以为数组
-如果多表联合查询的时候有相同字段那么可以直接使用表名,如wechat.update_time最终解析为kl_wechat.update
+参数为字符串(user_id desc,username desc)也可以为数组 如果多表联合查询的时候有相同字段那么可以直接使用表名,如wechat.update_time最终解析为kl_wechat.update
 
 ### rand()
 
-没有参数
-如果这个函数被调用则会覆盖上面的排序,会使用随机排序
+没有参数 如果这个函数被调用则会覆盖上面的排序,会使用随机排序
 
 ### group(string data)
 
@@ -385,8 +387,7 @@ where or连接的另一种添加方式
 
 ### update(array datas):int
 
-更新数据,如果where条件为空的话,更新的数组里如果有主键,则会自动提取主键为条件，如果没有主键也没有where条件则返回0
-支持二维数组批量事务更新，更新数据数组中一定要有主键，不能有where条件，否则返回0
+更新数据,如果where条件为空的话,更新的数组里如果有主键,则会自动提取主键为条件，如果没有主键也没有where条件则返回0 支持二维数组批量事务更新，更新数据数组中一定要有主键，不能有where条件，否则返回0
 
 ### delete(int id=0):int
 
@@ -498,8 +499,7 @@ $db->table('log')
     ->update($data);
 ```
 
-条件为空时不更新任何数据,确实是想更新全表请传 1=1
-另外如果想在原有字段上执行算术运算可以用下面方法
+条件为空时不更新任何数据,确实是想更新全表请传 1=1 另外如果想在原有字段上执行算术运算可以用下面方法
 
 ``` php
 $db->table('log')
@@ -588,8 +588,7 @@ $db->transaction(function()use($data){
 
 ### debug(isDebug=null)
 
-如果参数为null则返回当前数据库调试开启状态，否则设置调试状态
-关闭后如果有缓存对象则会缓存主键,表字段等信息
+如果参数为null则返回当前数据库调试开启状态，否则设置调试状态 关闭后如果有缓存对象则会缓存主键,表字段等信息
 
 ### abort(bool isAbort=true)
 

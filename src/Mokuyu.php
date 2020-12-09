@@ -19,6 +19,7 @@ use PDOStatement;
 use Psr\SimpleCache\CacheInterface;
 use mokuyu\database\exception\QueryParamException;
 use mokuyu\database\exception\QueryResultException;
+use Throwable;
 
 /**
  * @property PDO   pdoWrite
@@ -150,6 +151,24 @@ class Mokuyu
         ];
 
     /**
+     * 服务器断线标识字符
+     * @var array
+     */
+    protected array $breakMatchStr
+        = [
+            'server has gone away',
+            'no connection to the server',
+            'Lost connection',
+            'is dead or not enabled',
+            'Error while sending',
+            'decryption failed or bad record mac',
+            'server closed the connection unexpectedly',
+            'SSL connection has been closed unexpectedly',
+            'Error writing data to the connection',
+            'Resource deadlock avoided',
+            'failed with errno',
+        ];
+    /**
      * 数据库密码
      * @var string|null
      */
@@ -159,7 +178,7 @@ class Mokuyu
      * 端口
      * @var int
      */
-    protected int $port;
+    protected int $port = 3306;
 
     /**
      * 数据库前缀
@@ -221,6 +240,18 @@ class Mokuyu
     private int $temTableMode = 0;
 
     /**
+     * 是否断线重连
+     * @var bool
+     */
+    protected bool $breakReconnect = false;
+
+    /**
+     * 当前断线重连次数
+     * @var int
+     */
+    protected int $reconnectTimes = 0;
+
+    /**
      * 初始化连接
      * @DateTime 2019-11-05
      * @Author   mokuyu
@@ -253,6 +284,29 @@ class Mokuyu
         $this->temTableMode = $this->tableMode;
         $this->dbConfig     = $config;
         $this->initQueryParams();
+    }
+
+    /**
+     * 是否断线
+     * @access protected
+     * @param PDOException|Exception $e 异常对象
+     * @return bool
+     */
+    protected function isBreak($e): bool
+    {
+        if (!$this->breakReconnect) {
+            return false;
+        }
+
+        $error = $e->getMessage();
+
+        foreach ($this->breakMatchStr as $msg) {
+            if (false !== stripos($error, $msg)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -346,11 +400,6 @@ class Mokuyu
     public function clearCache()
     {
         $this->cache->clear();
-        // try {
-        //     $this->cache && $this->cache->deleteMultiple(array_keys($this->cacheKeys));
-        // } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
-        // }
-        // $this->cacheKeys = [];
     }
 
     /**
@@ -429,7 +478,7 @@ class Mokuyu
             else {
                 return $this->exec('DELETE FROM ' . $table . $where);
             }
-        } catch (QueryParamException $e) {
+        } catch (Throwable | QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
             return 0;
         }
@@ -449,11 +498,9 @@ class Mokuyu
 
     /**
      * 执行更新添加操作
-     * @DateTime 2019-10-04
-     * @Author   mokuyu
      * @param string $sql
      * @param array  $param
-     * @return bool|false|int|string
+     * @return bool|int|string
      */
     public function exec(string $sql, array $param = [])
     {
@@ -515,16 +562,36 @@ class Mokuyu
                 }
             }
             // $this->initQueryParams();
-
+            $this->reconnectTimes = 0;
             return $result;
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
+            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
+                ++$this->reconnectTimes;
+                return $this->close()->exec($sql, $param);
+            }
             $isTransaction && $this->rollback();
-            throw $e;
+            if ($e instanceof PDOException) {
+                throw new PDOException($sql, $this->dbConfig, $this->greateSQL($sql, $this->bindParam));
+            }
+            else {
+                throw $e;
+            }
+
         } finally {
             $this->initQueryParams();
         }
 
         //        return 0;
+    }
+
+    /**
+     * 关闭数据库,释放资源
+     */
+    public function close(): Mokuyu
+    {
+        $this->pdoRead  = null;
+        $this->pdoWrite = null;
+        return $this;
     }
 
     /**
@@ -821,7 +888,11 @@ class Mokuyu
             $this->cacheAction($ckey, $fieldArr);
 
             return $fieldArr;
-        } catch (PDOException $e) {
+        } catch (Exception $e) {
+            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
+                ++$this->reconnectTimes;
+                return $this->close()->getFields();
+            }
             throw $e;
         }
     }
@@ -1074,6 +1145,7 @@ class Mokuyu
      * @DateTime 2019-12-31
      * @Author   mokuyu
      * @return boolean
+     * @throws Exception
      */
     public function has()
     {
@@ -1358,6 +1430,7 @@ class Mokuyu
      * @param int $page     当前页码
      * @param int $pageSize 分页大小
      * @return array|bool
+     * @throws Throwable
      */
     public function paginate(int $page = 1, int $pageSize = 15)
     {
@@ -1417,7 +1490,6 @@ class Mokuyu
     }
 
     /**
-     * [query description]
      * @DateTime 2019-05-02
      * @Author   mokuyu
      * @param string $sql
@@ -1484,8 +1556,17 @@ class Mokuyu
             else {
                 return $query;
             }
-        } catch (PDOException $e) {
-            throw $e;
+        } catch (Exception $e) {
+            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
+                ++$this->reconnectTimes;
+                return $this->close()->query($sql, $param);
+            }
+            if ($e instanceof PDOException) {
+                throw new PDOException($sql, $this->dbConfig, $this->greateSQL($sql, $this->bindParam));
+            }
+            else {
+                throw $e;
+            }
         } finally {
             $this->initQueryParams();
         }
@@ -1773,6 +1854,11 @@ class Mokuyu
             // up in the database. Then we'll re-throw the exception so it can
             // be handled how the developer sees fit for their applications.
         } catch (Exception $e) {
+            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
+                ++$this->reconnectTimes;
+                $this->transTimes--;
+                return $this->close()->transaction($callback);
+            }
             $this->rollBack();
             throw $e;
         }
