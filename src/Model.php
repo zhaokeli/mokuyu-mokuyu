@@ -202,7 +202,7 @@ abstract class Model
     public function __call(string $method, array $params)
     {
         $method = strtolower($method);
-        if (in_array($method, ['select', 'has', 'get', 'add', 'update', 'delete', 'fieldoperation', 'setInc', 'setDec', 'max', 'min', 'avg', 'count', 'sum'])) {
+        if (in_array($method, explode(',', strtolower('select,column,chunk,insert,update,delete,save,get,has,paginate,min,max,avg,sum,count,getPK,getFields,setInc,setDec,fieldOperation')))) {
             $this->initQuery();
         }
         $result = call_user_func_array([$this->db, $method], $params);
@@ -210,9 +210,9 @@ abstract class Model
             return $this;
         }
         //追加字段
-        if (in_array($method, ['select', 'get'])) {
-            $this->parseAppendField($result);
-        }
+        // if (in_array($method, ['select', 'get'])) {
+        is_array($result) && $this->parseAppendField($result);
+        // }
         return $result;
     }
 

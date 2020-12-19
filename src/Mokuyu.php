@@ -706,7 +706,8 @@ class Mokuyu
             $this->limit(1);
             //这个列要放这里取要不然请求过后配置就被清空啦
             if (empty($this->queryParams['srcTable'])) {
-                return false;
+                throw new QueryParamException('数据表不能为空');
+                // return false;
             }
             //下面使用主键来查询
             $pk = $this->getPK();
@@ -1460,7 +1461,8 @@ class Mokuyu
             }
             $this->page($page, $pageSize);
             if (empty($this->queryParams['srcTable'])) {
-                return false;
+                throw new QueryParamException('数据表不能为空');
+                // return false;
             }
             $this->buildSqlConf();
             $sql   = $this->buildSelect();
@@ -1639,7 +1641,8 @@ class Mokuyu
     {
         try {
             if (empty($this->queryParams['srcTable'])) {
-                return false;
+                throw new QueryParamException('数据表不能为空');
+                // return false;
             }
             $cacheData = $this->getQueryCache();
             if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
