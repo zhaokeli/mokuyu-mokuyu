@@ -3,80 +3,86 @@
 <!-- TOC -->
 
 - [Mokuyu数据库操作](#mokuyu数据库操作)
-    - [安装方法](#安装方法)
-        - [composer](#composer)
-        - [手动安装](#手动安装)
-    - [使用规则说明](#使用规则说明)
-        - [数据库表/字段](#数据库表字段)
-        - [特别注意/解析规则](#特别注意解析规则)
-        - [功能亮点和要求](#功能亮点和要求)
-    - [连接数据库](#连接数据库)
-        - [连接mysql](#连接mysql)
-        - [连接pgsql](#连接pgsql)
-        - [连接sqlite](#连接sqlite)
-    - [查询条件连贯操作](#查询条件连贯操作)
-        - [fieldMap(array map)](#fieldmaparray-map)
-        - [fieldMode(int type=0)](#fieldmodeint-type0)
-        - [tableMode(int type=0)](#tablemodeint-type0)
-        - [forceIndex(string field)](#forceindexstring-field)
-        - [useWriteConn()](#usewriteconn)
-        - [field(string/array fields)](#fieldstringarray-fields)
-        - [where(string/array)](#wherestringarray)
-        - [whereOr(string/array)](#whereorstringarray)
-        - [limit(start,end=null)](#limitstartendnull)
-        - [order(string/array)](#orderstringarray)
-        - [rand()](#rand)
-        - [group(string data)](#groupstring-data)
-        - [page(int page=1,int pageSize=15)](#pageint-page1int-pagesize15)
-        - [join(array data)](#joinarray-data)
-    - [执行查询并返回结果](#执行查询并返回结果)
-        - [select():array](#selectarray)
-        - [column($field, string $key = null, bool $isDeleteIndexKey = false)](#columnfield-string-key--null-bool-isdeleteindexkey--false)
-        - [chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')](#chunkint-count-closure-callback-string-sortfield--null-string-sorttype--asc)
-        - [insert(array datas):int](#insertarray-datasint)
-        - [update(array datas):int](#updatearray-datasint)
-        - [delete(int id=0):int](#deleteint-id0int)
-        - [save(array datas):int](#savearray-datasint)
-        - [get([int id = 0]):array/string](#getint-id--0arraystring)
-        - [has():boolean](#hasboolean)
-        - [paginate(int page=1,int pageSize=15):array](#paginateint-page1int-pagesize15array)
-        - [min(...string field):int/array](#minstring-fieldintarray)
-        - [max(...string field):int/array](#maxstring-fieldintarray)
-        - [avg(...string field):int/array](#avgstring-fieldintarray)
-        - [sum(...string field):int/array](#sumstring-fieldintarray)
-        - [count(string field):int](#countstring-fieldint)
-    - [其它信息获取](#其它信息获取)
-        - [getPK():string](#getpkstring)
-        - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
-        - [getQueryParams():array](#getqueryparamsarray)
-        - [getFields():array](#getfieldsarray)
-    - [执行原生SQL](#执行原生sql)
-        - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
-        - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
-    - [数据的增删改](#数据的增删改)
-        - [添加数据](#添加数据)
-        - [更新数据](#更新数据)
-        - [删除数据](#删除数据)
-    - [字段操作](#字段操作)
-        - [setInc(string fiela,int num=1):int](#setincstring-fielaint-num1int)
-        - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
-        - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
-    - [事务处理](#事务处理)
-        - [beginTransaction()](#begintransaction)
-        - [transaction(Closure callback)](#transactionclosure-callback)
-    - [调试](#调试)
-        - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
-        - [debug(isDebug=null)](#debugisdebugnull)
-        - [abort(bool isAbort=true)](#abortbool-isaborttrue)
-        - [getLastSql():string](#getlastsqlstring)
-        - [getLastError():string](#getlasterrorstring)
-        - [log():array](#logarray)
-        - [info():array](#infoarray)
-    - [其它功能](#其它功能)
-        - [setCache(CacheInterface obj): void](#setcachecacheinterface-obj-void)
-        - [setBindParam(array value): void](#setbindparamarray-value-void)
-        - [getWhere(array data = []):array](#getwherearray-data--array)
-    - [SQLite示例](#sqlite示例)
+  - [安装方法](#安装方法)
+    - [composer](#composer)
+    - [手动安装](#手动安装)
+  - [使用规则说明](#使用规则说明)
+    - [数据库表/字段](#数据库表字段)
+    - [特别注意/解析规则](#特别注意解析规则)
+    - [功能亮点和要求](#功能亮点和要求)
+  - [连接数据库](#连接数据库)
+    - [连接mysql](#连接mysql)
+    - [连接pgsql](#连接pgsql)
+    - [连接sqlite](#连接sqlite)
+  - [查询条件连贯操作](#查询条件连贯操作)
+    - [fieldMap(array map)](#fieldmaparray-map)
+    - [fieldMode(int type=0)](#fieldmodeint-type0)
+    - [tableMode(int type=0)](#tablemodeint-type0)
+    - [forceIndex(string field)](#forceindexstring-field)
+    - [useWriteConn()](#usewriteconn)
+    - [field(string/array fields)](#fieldstringarray-fields)
+    - [where(string/array)](#wherestringarray)
+    - [whereOr(string/array)](#whereorstringarray)
+    - [limit(start,end=null)](#limitstartendnull)
+    - [order(string/array)](#orderstringarray)
+    - [rand()](#rand)
+    - [group(string data)](#groupstring-data)
+    - [page(int page=1,int pageSize=15)](#pageint-page1int-pagesize15)
+    - [debug(bool $debug=false)](#debugbool-debugfalse)
+    - [join(array data)](#joinarray-data)
+  - [执行查询并返回结果](#执行查询并返回结果)
+    - [select():array](#selectarray)
+    - [column($field, string $key = null, bool $isDeleteIndexKey = false)](#columnfield-string-key--null-bool-isdeleteindexkey--false)
+    - [chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')](#chunkint-count-closure-callback-string-sortfield--null-string-sorttype--asc)
+    - [insert(array datas):int](#insertarray-datasint)
+    - [update(array datas):int](#updatearray-datasint)
+    - [delete(int id=0):int](#deleteint-id0int)
+    - [save(array datas):int](#savearray-datasint)
+    - [get([int id = 0]):array/string](#getint-id--0arraystring)
+    - [has():boolean](#hasboolean)
+    - [paginate(int page=1,int pageSize=15):array](#paginateint-page1int-pagesize15array)
+    - [min(...string field):int/array](#minstring-fieldintarray)
+    - [max(...string field):int/array](#maxstring-fieldintarray)
+    - [avg(...string field):int/array](#avgstring-fieldintarray)
+    - [sum(...string field):int/array](#sumstring-fieldintarray)
+    - [count(string field):int](#countstring-fieldint)
+  - [其它信息获取](#其它信息获取)
+    - [getPK():string](#getpkstring)
+    - [getPDO(bool isWrite = false): PDO](#getpdobool-iswrite--false-pdo)
+    - [getQueryParams():array](#getqueryparamsarray)
+    - [getFields():array](#getfieldsarray)
+  - [执行原生SQL](#执行原生sql)
+    - [query(string sql,array params=[]):array](#querystring-sqlarray-paramsarray)
+    - [exec(string sql,array params=[]):int](#execstring-sqlarray-paramsint)
+  - [数据的增删改](#数据的增删改)
+    - [添加数据](#添加数据)
+    - [更新数据](#更新数据)
+    - [删除数据](#删除数据)
+  - [字段操作](#字段操作)
+    - [setInc(string fiela,int num=1):int](#setincstring-fielaint-num1int)
+    - [setDec(string field,int num=1):int](#setdecstring-fieldint-num1int)
+    - [fieldOperation(string field,int num=0,string operation='+'):int](#fieldoperationstring-fieldint-num0string-operationint)
+  - [事务处理](#事务处理)
+    - [beginTransaction()](#begintransaction)
+    - [transaction(Closure callback)](#transactionclosure-callback)
+  - [调试](#调试)
+    - [fetchSql(bool bo=true)](#fetchsqlbool-botrue)
+    - [setDebug(bool isDebug=false)](#setdebugbool-isdebugfalse)
+    - [isDebug()](#isdebug)
+    - [abort(bool isAbort=true)](#abortbool-isaborttrue)
+    - [getLastSql():string](#getlastsqlstring)
+    - [getLastError():string](#getlasterrorstring)
+    - [log():array](#logarray)
+    - [info():array](#infoarray)
+  - [其它功能](#其它功能)
+    - [setCache(CacheInterface obj): void](#setcachecacheinterface-obj-void)
+    - [setBindParam(array value): void](#setbindparamarray-value-void)
+    - [getWhere(array data = []):array](#getwherearray-data--array)
+    - [addEventListener(string $eventType, $handler)](#addeventlistenerstring-eventtype-handler)
+    - [removeEventListener(string $eventType, $handler)](#removeeventlistenerstring-eventtype-handler)
+    - [trigger(string $eventType, array $eventData = [])](#triggerstring-eventtype-array-eventdata--)
+    - [getConnections(): array](#getconnections-array)
+  - [SQLite示例](#sqlite示例)
 
 <!-- /TOC -->
 
@@ -337,6 +343,10 @@ where or连接的另一种添加方式
 
 返回指定页码和分页大小的记录数
 
+### debug(bool $debug=false)
+
+本次查询是否开启调试模式
+
 ### join(array data)
 
 ``` php
@@ -586,9 +596,13 @@ $db->transaction(function()use($data){
 
 默认为true,结果集为当前执行的sql语句
 
-### debug(isDebug=null)
+### setDebug(bool isDebug=false)
 
-如果参数为null则返回当前数据库调试开启状态，否则设置调试状态 关闭后如果有缓存对象则会缓存主键,表字段等信息
+全局设置调试状态,会影响全部查询, 关闭后如果有缓存对象则会缓存主键,表字段等信息
+
+### isDebug()
+
+数据库当前调试状态
 
 ### abort(bool isAbort=true)
 
@@ -623,6 +637,22 @@ $db->transaction(function()use($data){
 ### getWhere(array data = []):array
 
 返回生成的where条件，参数可以为空，不为空的话会覆盖原来条件，使用这个方法后查询的所有参数为重置，就不能使用select update..等查询语句，条件需要重新设置。返回结果为 **[sql string,bind param]**
+
+### addEventListener(string $eventType, $handler)
+
+添加事件监听器,具体事件可参数类常量
+
+### removeEventListener(string $eventType, $handler)
+
+移除事件监听器
+
+### trigger(string $eventType, array $eventData = [])
+
+触发指定事件,且会在eventData此数组前面插入当前数据库对象,然后当做参数传给事件处理器
+
+### getConnections(): array
+
+返回所有pdo连接对象
 
 ## SQLite示例
 

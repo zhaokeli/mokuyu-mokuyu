@@ -329,10 +329,15 @@ class Mokuyu
         foreach ($servers as $key => $value) {
             $arr                              = explode(':', trim($value));
             $this->hostList[$arr[1] ?? 'w'][] = [
-                'server'   => $arr[0],
-                'port'     => $ports[$key] ?? end($ports),
-                'username' => $usernames[$key] ?? end($usernames),
-                'password' => $password[$key] ?? end($passwords),
+                'database_name' => $this->databaseName,
+                'database_type' => $this->databaseType,
+                'database_file' => $this->databaseFile,
+                'server'        => $arr[0],
+                'port'          => $ports[$key] ?? end($ports),
+                'username'      => $usernames[$key] ?? end($usernames),
+                'password'      => $password[$key] ?? end($passwords),
+                'charset'       => $this->charset,
+                'prefix'        => $this->prefix,
             ];
         }
         if (!$this->hostList['w']) {
@@ -2598,28 +2603,32 @@ class Mokuyu
                 // if (isset($this->port) && is_int($this->port * 1)) {
                 // $port = $this->port;
                 // }
-                $server   = $options['server'];
-                $port     = $options['port'];
-                $username = $options['username'];
-                $password = $options['password'];
+                $server       = $options['server'];
+                $port         = $options['port'];
+                $username     = $options['username'];
+                $password     = $options['password'];
+                $databaseType = strtolower($options['database_type']);
+                $databaseFile = $options['database_file'];
+                $databaseName = $options['database_name'];
+                $charset      = $options['charset'] ?? 'utf8';
 
-                $type    = strtolower($this->databaseType);
+                // $type    = strtolower($this->databaseType);
                 $is_port = isset($port);
 
                 // if (isset($options['prefix'])) {
                 //     $this->prefix = $options['prefix'];
                 // }
 
-                switch ($type) {
+                switch ($databaseType) {
                     case 'mariadb':
-                        $type = 'mysql';
+                        $databaseType = 'mysql';
 
                     case 'mysql':
                         if ($this->socket) {
-                            $dsn = $type . ':unix_socket=' . $this->socket . ';dbname=' . $this->databaseName;
+                            $dsn = $databaseType . ':unix_socket=' . $this->socket . ';dbname=' . $databaseName;
                         }
                         else {
-                            $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
+                            $dsn = $databaseType . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $databaseName;
                         }
 
                         // Make MySQL using standard quoted identifier
@@ -2627,46 +2636,46 @@ class Mokuyu
                         break;
 
                     case 'pgsql':
-                        $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
+                        $dsn = $databaseType . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $databaseName;
                         break;
 
                     case 'sybase':
-                        $dsn = 'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                        $dsn = 'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $databaseName;
                         break;
 
                     case 'oracle':
                         $dbname = $server
                             ?
-                            '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName
+                            '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $databaseName
                             :
-                            $this->databaseName;
+                            $databaseName;
                         // $conn_string = '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))';
-                        $dsn = 'oci:dbname=' . $dbname . ($this->charset ? ';charset=' . $this->charset : '');
+                        $dsn = 'oci:dbname=' . $dbname . ($charset ? ';charset=' . $charset : '');
                         break;
 
                     case 'mssql':
                         $dsn = strstr(PHP_OS, 'WIN')
                             ?
-                            'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName
+                            'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $databaseName
                             :
-                            'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                            'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $databaseName;
 
                         // Keep MSSQL QUOTED_IDENTIFIER is ON for standard quoting
                         $commands[] = 'SET QUOTED_IDENTIFIER ON';
                         break;
 
                     case 'sqlite':
-                        $dsn            = $type . ':' . $this->databaseFile;
+                        $dsn            = $databaseType . ':' . $databaseFile;
                         $this->username = null;
                         $this->password = null;
                         break;
                 }
 
                 if (
-                    in_array($type, ['mariadb', 'mysql', 'pgsql', 'sybase', 'mssql']) &&
-                    $this->charset
+                    in_array($databaseType, ['mariadb', 'mysql', 'pgsql', 'sybase', 'mssql']) &&
+                    $charset
                 ) {
-                    $commands[] = "SET NAMES '" . $this->charset . "'";
+                    $commands[] = "SET NAMES '" . $charset . "'";
                 }
                 if (!$dsn) {
                     throw new PDOException('database dsn is not Empty', 1);
@@ -2690,6 +2699,14 @@ class Mokuyu
         }
         return self::$connections[$connectionKey];
 
+    }
+
+    /**
+     * 返回所有连接实例
+     */
+    public function getConnections(): array
+    {
+        return self::$connections;
     }
 
     /**

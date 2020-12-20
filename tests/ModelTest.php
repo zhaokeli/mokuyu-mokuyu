@@ -42,5 +42,11 @@ class ModelTest extends TestCase
             'id' => 'article_id',
         ])->where('id', 10)->field('views')->get();
         $this->assertEquals(10000, $views);
+        $views = $mod->fieldMap([
+            'id' => 'article_id',
+        ])->where('id', 10)->field('views')->get();
+        $this->assertEquals(10000, $views);
+        //两次查询后测试创建了几个链接
+        $this->assertCount(1, $mod->getConnections());
     }
 }
