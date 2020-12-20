@@ -12,6 +12,10 @@ use Psr\SimpleCache\CacheInterface;
 abstract class Model extends Mokuyu
 {
     /**
+     * 数据库连接配置
+     */
+    protected ?array $connect = null;
+    /**
      * 插入操作
      */
     protected const ACTION_INSERT = 0;
@@ -148,7 +152,7 @@ abstract class Model extends Mokuyu
         $this->addEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
         $this->addEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
         $this->handlerResetQueryParam();
-        parent::__construct($config);
+        parent::__construct($config ?: $this->connect);
     }
 
     /**
