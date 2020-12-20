@@ -872,6 +872,58 @@ class Mokuyu
     }
 
     /**
+     * @return array
+     */
+    public function getTables(): array
+    {
+        $ckey     = $this->databaseType . ':' . $this->databaseName . ':' . ':tables:';
+        $tableArr = $this->cacheAction($ckey);
+        if ($tableArr === null) {
+            switch ($this->databaseType) {
+                case 'mysql':
+                    $sql = 'SELECT TABLE_NAME FROM information_schema.TABLES  WHERE  TABLE_SCHEMA=\'' . $this->databaseName . '\' ORDER BY TABLE_NAME ASC';
+                    $tm  = $this->pdoRead->prepare($sql);
+                    $tm->execute();
+                    $tableArr = $tm->fetchAll(PDO::FETCH_COLUMN);
+                    // $tableArr = array_column($tableArr, 'TABLE_NAME');
+                    break;
+                case 'sqlite':
+                    $sql = 'SELECT name FROM sqlite_master where type=\'table\' order by name';
+                    $tm  = $this->pdoRead->prepare($sql);
+                    $tm->execute();
+                    $tableArr = $tm->fetchAll(PDO::FETCH_COLUMN);
+                    // $tableArr = array_column($tableArr, 'name');
+                    break;
+                case 'pgsql':
+                    $sql = 'SELECT table_name FROM information_schema.tables WHERE table_schema=\'public\' AND table_type=\'BASE TABLE\';';
+                    $tm  = $this->pdoRead->prepare($sql);
+                    $tm->execute();
+                    $tableArr = $tm->fetchAll(PDO::FETCH_COLUMN);
+                    // $tableArr = array_column($tableArr, 'table_name');
+                    break;
+                case 'oracle':
+                    $sql = 'select t.table_name from user_tables t';
+                    $tm  = $this->pdoRead->prepare($sql);
+                    $tm->execute();
+                    $tableArr = $tm->fetchAll(PDO::FETCH_COLUMN);
+                    // $tableArr = array_column($tableArr, 'table_name');
+                    break;
+                case 'mssql':
+                    $sql = 'select name from sysobjects where xtype=\'U\' order by name';
+                    $tm  = $this->pdoRead->prepare($sql);
+                    $tm->execute();
+                    $tableArr = $tm->fetchAll(PDO::FETCH_COLUMN);
+                    // $tableArr = array_column($tableArr, 'name');
+                    break;
+            }
+            $tableArr = $tableArr ?: [];
+            $this->cacheAction($ckey, $tableArr);
+        }
+        return $tableArr;
+
+    }
+
+    /**
      * 取当前表的所有字段
      * @DateTime 2018-04-27
      * @Author   mokuyu
@@ -879,120 +931,123 @@ class Mokuyu
      */
     public function getFields(): array
     {
-        try {
-            if (empty($this->queryParams['srcTable'])) {
-                return [];
-            }
-            // $table_name = str_replace($this->yinhao, '', $this->queryParams['srcTable']);
-            $table_name = $this->prefix . $this->parseTable($this->queryParams['srcTable']);
-            $fieldArr   = [];
-            $ckey       = $this->databaseName . ':' . $table_name . ':fields:';
-            switch ($this->databaseType) {
-                case 'mysql':
-                    $sql      = 'DESC ' . $this->tablePrefix($this->queryParams['srcTable']);
-                    $ckey     .= md5($sql);
-                    $fieldArr = $this->cacheAction($ckey);
-                    if ($fieldArr === null) {
-                        $tm = $this->pdoRead->prepare($sql);
-                        $tm->execute();
-                        $fieldArr = $tm->fetchAll(PDO::FETCH_COLUMN);
-                    }
-                    break;
-                case 'sqlite':
-                    $sql = 'pragma table_info (\'' . $table_name . '\')';
-
-                    $ckey     .= md5($sql);
-                    $fieldArr = $this->cacheAction($ckey);
-                    if ($fieldArr === null) {
-                        $info = $this->pdoRead->query($sql);
-                        if ($info) {
-                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
-                            foreach ($info as $key => $value) {
-                                $fieldArr[] = $value['name'];
-                            }
-                        }
-                    }
-                    break;
-                case 'pgsql':
-                    $sql      = 'select * from information_schema.columns where table_schema=\'public\' and table_name=\'' . $table_name . '\';';
-                    $ckey     .= md5($sql);
-                    $fieldArr = $this->cacheAction($ckey);
-                    if ($fieldArr === null) {
-                        $info = $this->pdoRead->query($sql);
-                        if ($info) {
-                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
-                            foreach ($info as $key => $value) {
-                                $fieldArr[] = $value['column_name'];
-                            }
-                        }
-
-                    }
-                    break;
-                case 'oracle':
-                    $sql      = 'SELECT table_name, column_name, data_type FROM all_tab_cols WHERE table_name = \'' . $table_name . '\'';
-                    $ckey     .= md5($sql);
-                    $fieldArr = $this->cacheAction($ckey);
-                    if ($fieldArr === null) {
-                        $info = $this->pdoRead->query($sql);
-                        if ($info) {
-                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
-                            foreach ($info as $key => $value) {
-                                $fieldArr[] = $value['COLUMN_NAME'];
-                            }
-                        }
-
-                    }
-                    break;
-                case 'mssql':
-
-                    $sql      = [
-                        'SELECT',
-                        '    ( CASE WHEN a.colorder= 1 THEN d.name ELSE \'\' END ) [table_name],',
-                        '    a.name [column_name],',
-                        '    b.name [column_type],',
-                        '    g.[value] AS [column_note]',
-                        'FROM',
-                        '    syscolumns a',
-                        '    LEFT JOIN systypes b ON a.xtype= b.xusertype',
-                        '    INNER JOIN sysobjects d ON a.id= d.id',
-                        '    AND d.xtype= \'U\'',
-                        '    AND d.name<> \'dtproperties\'',
-                        '    LEFT JOIN sys.extended_properties g ON a.id= g.major_id',
-                        '    AND a.colid = g.minor_id',
-                        'WHERE',
-                        '    d.[name] = \'' . $table_name . '\' --数据表名称',
-                        '',
-                        'ORDER BY',
-                        '    a.id,',
-                        '    a.colorder',
-                    ];
-                    $sql      = implode("\r\n", $sql);
-                    $ckey     .= md5($sql);
-                    $fieldArr = $this->cacheAction($ckey);
-                    if ($fieldArr === null) {
-                        $info = $this->pdoRead->query($sql);
-                        if ($info) {
-                            $info = $info->fetchAll(PDO::FETCH_ASSOC);
-                            foreach ($info as $key => $value) {
-                                $fieldArr[] = $value['column_name'];
-                            }
-                        }
-
-                    }
-                    break;
-
-            }
-            $fieldArr = $fieldArr ?: [];
-            $this->cacheAction($ckey, $fieldArr);
-
-            return $fieldArr;
-        } catch (Exception $e) {
-            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
-                ++$this->reconnectTimes;
-                return $this->close()->getFields();
-            }
-            throw $e;
+        // try {
+        if (empty($this->queryParams['srcTable'])) {
+            return [];
         }
+        // $table_name = str_replace($this->yinhao, '', $this->queryParams['srcTable']);
+        $table_name = $this->prefix . $this->parseTable($this->queryParams['srcTable']);
+        $fieldArr   = [];
+        $ckey       = $this->databaseName . ':' . $table_name . ':fields:';
+        switch ($this->databaseType) {
+            case 'mysql':
+                $sql      = 'DESC ' . $this->tablePrefix($this->queryParams['srcTable']);
+                $ckey     .= md5($sql);
+                $fieldArr = $this->cacheAction($ckey);
+                if ($fieldArr === null) {
+                    $tm = $this->pdoRead->prepare($sql);
+                    $tm->execute();
+                    $fieldArr = $tm->fetchAll(PDO::FETCH_COLUMN);
+                }
+                break;
+            case 'sqlite':
+                $sql = 'pragma table_info (\'' . $table_name . '\')';
+
+                $ckey     .= md5($sql);
+                $fieldArr = $this->cacheAction($ckey);
+                if ($fieldArr === null) {
+                    $info = $this->pdoRead->query($sql);
+                    if ($info) {
+                        $info     = $info->fetchAll(PDO::FETCH_ASSOC);
+                        $fieldArr = array_column($info, 'name');
+                        // foreach ($info as $key => $value) {
+                        //     $fieldArr[] = $value['name'];
+                        // }
+                    }
+                }
+                break;
+            case 'pgsql':
+                $sql      = 'select * from information_schema.columns where table_schema=\'public\' and table_name=\'' . $table_name . '\';';
+                $ckey     .= md5($sql);
+                $fieldArr = $this->cacheAction($ckey);
+                if ($fieldArr === null) {
+                    $info = $this->pdoRead->query($sql);
+                    if ($info) {
+                        $info     = $info->fetchAll(PDO::FETCH_ASSOC);
+                        $fieldArr = array_column($info, 'column_name');
+                        // foreach ($info as $key => $value) {
+                        //     $fieldArr[] = $value['column_name'];
+                        // }
+                    }
+
+                }
+                break;
+            case 'oracle':
+                $sql      = 'SELECT table_name, column_name, data_type FROM all_tab_cols WHERE table_name = \'' . $table_name . '\'';
+                $ckey     .= md5($sql);
+                $fieldArr = $this->cacheAction($ckey);
+                if ($fieldArr === null) {
+                    $info = $this->pdoRead->query($sql);
+                    if ($info) {
+                        $info     = $info->fetchAll(PDO::FETCH_ASSOC);
+                        $fieldArr = array_column($info, 'COLUMN_NAME');
+                        // foreach ($info as $key => $value) {
+                        //     $fieldArr[] = $value['COLUMN_NAME'];
+                        // }
+                    }
+
+                }
+                break;
+            case 'mssql':
+                $sql      = [
+                    'SELECT',
+                    '    ( CASE WHEN a.colorder= 1 THEN d.name ELSE \'\' END ) [table_name],',
+                    '    a.name [column_name],',
+                    '    b.name [column_type],',
+                    '    g.[value] AS [column_note]',
+                    'FROM',
+                    '    syscolumns a',
+                    '    LEFT JOIN systypes b ON a.xtype= b.xusertype',
+                    '    INNER JOIN sysobjects d ON a.id= d.id',
+                    '    AND d.xtype= \'U\'',
+                    '    AND d.name<> \'dtproperties\'',
+                    '    LEFT JOIN sys.extended_properties g ON a.id= g.major_id',
+                    '    AND a.colid = g.minor_id',
+                    'WHERE',
+                    '    d.[name] = \'' . $table_name . '\' --数据表名称',
+                    '',
+                    'ORDER BY',
+                    '    a.id,',
+                    '    a.colorder',
+                ];
+                $sql      = implode("\r\n", $sql);
+                $ckey     .= md5($sql);
+                $fieldArr = $this->cacheAction($ckey);
+                if ($fieldArr === null) {
+                    $info = $this->pdoRead->query($sql);
+                    if ($info) {
+                        $info     = $info->fetchAll(PDO::FETCH_ASSOC);
+                        $fieldArr = array_column($info, 'column_name');
+                        // foreach ($info as $key => $value) {
+                        //     $fieldArr[] = $value['column_name'];
+                        // }
+                    }
+
+                }
+                break;
+
+        }
+        $fieldArr = $fieldArr ?: [];
+        $this->cacheAction($ckey, $fieldArr);
+
+        return $fieldArr;
+        // } catch (Exception $e) {
+        //     if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
+        //         ++$this->reconnectTimes;
+        //         return $this->close()->getFields();
+        //     }
+        //     throw $e;
+        // }
     }
 
     /**

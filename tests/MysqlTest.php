@@ -585,4 +585,10 @@ class MysqlTest extends Base
         $this->assertIsArray($this->db->info());
     }
 
+    public function testGetTables()
+    {
+        $tables = $this->db->getTables();
+        $this->assertTrue(in_array('kl_article', $tables));
+    }
+
 }

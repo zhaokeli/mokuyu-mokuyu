@@ -5,12 +5,42 @@ namespace mokuyu\database;
 
 use Closure;
 use Psr\SimpleCache\CacheInterface;
+use Exception;
+use mokuyu\database\exception\QueryParamException;
+use PDOStatement;
 
 /**
  * 模型类,实例化一次进行一次查询
  */
 abstract class Model extends Mokuyu
 {
+    /**
+     * 定义写入的时间戳字段名
+     * @var string
+     */
+    protected string $createTimeField = 'create_time';
+    protected string $updateTimeField = 'update_time';
+
+    /**
+     * 是否写入时间戳
+     * @var bool
+     */
+    protected bool $isWriteTimestamp = true;
+
+
+    /**
+     * 是否自动创建时间戳字段
+     * @var bool
+     */
+    protected bool $autoCreateTimeFields = false;
+
+    /**
+     * 是否自动创建timestamp自动格式化时间字段,默认值为CURRENT_TIMESTAMP,更新时间段会自动更新,不需要额外维护
+     * 需要开启自动创建时间戳字段此设置才生效
+     * @var bool
+     */
+    protected bool $autoCreateTimestampFields = true;
+
     /**
      * 数据库连接配置
      */
@@ -145,14 +175,112 @@ abstract class Model extends Mokuyu
         if ($tableName !== null) {
             $this->tableName = $tableName;
         }
+        $this->connect = $config ?: $this->connect;
         if ($this->tableName === null) {
             $this->tableName = basename(str_replace('\\', '/', static::class));
+
+            //如果表名字不存在则置空
+            $tables = $this->getTables();
+            if ($tables && !in_array($this->connect['prefix'] . $this->parseName($this->tableName, 1), $tables)) {
+                $this->tableName = '';
+            }
         }
-        // $this = $db;
         $this->addEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
         $this->addEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
         $this->handlerResetQueryParam();
-        parent::__construct($config ?: $this->connect);
+        parent::__construct($this->connect);
+    }
+
+    /**
+     * 添加数据,支持批量添加
+     * @param array $datas
+     * @return bool|false|int|mixed|string
+     * @throws Exception
+     */
+    public function add(array $datas)
+    {
+        if (!isset($datas[0])) {
+            $datas = [$datas];
+        }
+        $this->autoCreateField();
+        //取表的所有字段
+        $table_fields = $this->getFields();
+        foreach ($datas as $key => &$data) {
+            //自动添加创建和更新字段的时间戳
+            if (in_array($this->createTimeField, $table_fields) && !array_key_exists($this->createTimeField, $data)) {
+                $data[$this->createTimeField] = time();
+            }
+            if (in_array($this->updateTimeField, $table_fields) && !array_key_exists($this->updateTimeField, $data)) {
+                $data[$this->updateTimeField] = time();
+            }
+            $this->autoData($data, self::ACTION_INSERT);
+            $this->preFieldOnInsert($data);
+            $this->deleteFieldOnInsert($data);
+            // $datas[$key] = $data;
+        }
+
+        return parent::add($datas);
+    }
+
+    /**
+     * 更新数据,支持批量
+     * @param array $datas
+     * @return bool|false|int|string
+     * @throws QueryParamException
+     */
+    public function update(array $datas)
+    {
+        if (!isset($datas[0])) {
+            $datas = [$datas];
+        }
+        $this->autoCreateField();
+        $table_name = trim($this->queryParams['table'], $this->yinhao);
+        $table_name = $this->parseName(str_replace($this->prefix, '', $table_name), 3);
+        //取表的所有字段
+        $table_fields = $this->getFields();
+        foreach ($datas as $key => &$data) {
+            if (in_array($this->updateTimeField, $table_fields) && !array_key_exists($this->updateTimeField, $data)) {
+                $data[$table_name . '.' . $this->updateTimeField] = time();
+                // $datas[$key]                                      = $data;
+            }
+            $this->autoData($data, self::ACTION_UPDATE);
+            $this->preFieldOnUpdate($data);
+            $this->deleteFieldOnUpdate($data);
+            // $datas[$key] = $data;
+        }
+
+        return parent::update($datas);
+    }
+
+    /**
+     * 自动添加时间字段,只要调试模式下生效
+     */
+    protected function autoCreateField()
+    {
+        if ($this->isDebug()) {
+            $fields     = $this->getFields();
+            $table_name = $this->queryParams['table'];
+            //这里一定要判断下$table_name是不是为空,因为有些是没有表名字的
+            if ($table_name && $fields && $this->autoCreateTimeFields) {
+                if (!in_array($this->createTimeField, $fields)) {
+                    $sql = 'ALTER TABLE ' . $table_name . ' ADD ' . $this->yinhao . $this->createTimeField . $this->yinhao . ' int(11) unsigned NOT NULL DEFAULT \'0\' COMMENT \'记录创建时间\'';
+                    $this->pdoWrite->exec($sql);
+                }
+                if (!in_array($this->updateTimeField, $fields)) {
+                    $sql = 'ALTER TABLE ' . $table_name . ' ADD ' . $this->yinhao . $this->updateTimeField . $this->yinhao . ' int(11) unsigned NOT NULL DEFAULT \'0\' COMMENT \'记录更新时间\'';
+                    $this->pdoWrite->exec($sql);
+                }
+                if ($this->autoCreateTimestampFields && !in_array('auto_' . $this->updateTimeField, $fields)) {
+                    $sql = 'ALTER TABLE ' . $table_name . ' ADD ' . $this->yinhao . 'auto_' . $this->updateTimeField . $this->yinhao . ' timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT \'自动创建时间字符串\'';
+                    $this->pdoWrite->exec($sql);
+                }
+                if ($this->autoCreateTimestampFields && !in_array('auto_' . $this->updateTimeField, $fields)) {
+                    $sql = 'ALTER TABLE ' . $table_name . ' ADD ' . $this->yinhao . 'auto_' . $this->updateTimeField . $this->yinhao . ' timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT \'自动更新时间字符串\'';
+                    $this->pdoWrite->exec($sql);
+                }
+            }
+
+        }
     }
 
     /**
@@ -160,33 +288,13 @@ abstract class Model extends Mokuyu
      */
     public function handlerResetQueryParam()
     {
-        // $this->temFieldMode = $this->fieldMode;
-        // $this->temTableMode = $this->tableMode;
-        // $this->temFieldMap  = $this->fieldMap;
         $this->table($this->tableName);
-        // if ($isRemoveListener || !isset($isRemoveListener)) {
-        //     $this->removeEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
-        //     $this->removeEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
-        // }
     }
 
-    // public function __call(string $method, array $params)
-    // {
-    //     $method = strtolower($method);
-    //     // if (in_array($method, explode(',', strtolower('select,column,chunk,insert,update,delete,save,get,has,paginate,min,max,avg,sum,count,getPK,getFields,setInc,setDec,fieldOperation')))) {
-    //     //     $this->initQuery();
-    //     // }
-    //     $result = call_user_func_array([$this, $method], $params);
-    //     if ($result instanceof Mokuyu) {
-    //         return $this;
-    //     }
-    //     //追加字段
-    //     if (in_array($method, ['select', 'get', 'paginate'])) {
-    //         $this->parseAppendField($result);
-    //     }
-    //     return $result;
-    // }
-
+    /**
+     * @return array|bool|PDOStatement|string
+     * @throws QueryParamException
+     */
     public function select()
     {
         $result = parent::select();
@@ -194,6 +302,11 @@ abstract class Model extends Mokuyu
         return $result;
     }
 
+    /**
+     * @param int $id
+     * @return bool|mixed|string
+     * @throws QueryParamException
+     */
     public function get(int $id = 0)
     {
         $result = parent::get($id);
@@ -241,42 +354,42 @@ abstract class Model extends Mokuyu
      * @param array $datas
      * @return mixed
      */
-    public function add(array $datas)
-    {
-        if (count($datas) === count($datas, 1)) {
-            $datas = [$datas];
-        }
-        foreach ($datas as $key => $data) {
-            $this->autoData($data, self::ACTION_INSERT);
-            $this->preFieldOnInsert($data);
-            $this->deleteFieldOnInsert($data);
-            $datas[$key] = $data;
-        }
-        // $this->initQuery();
-
-        return parent::add($datas);
-    }
+    // public function add(array $datas)
+    // {
+    //     if (count($datas) === count($datas, 1)) {
+    //         $datas = [$datas];
+    //     }
+    //     foreach ($datas as $key => $data) {
+    //         $this->autoData($data, self::ACTION_INSERT);
+    //         $this->preFieldOnInsert($data);
+    //         $this->deleteFieldOnInsert($data);
+    //         $datas[$key] = $data;
+    //     }
+    //     // $this->initQuery();
+    //
+    //     return parent::add($datas);
+    // }
 
     /**
      * 更新数据
      * @param array $datas
      * @return mixed
      */
-    public function update(array $datas)
-    {
-        if (count($datas) === count($datas, 1)) {
-            $datas = [$datas];
-        }
-        foreach ($datas as $key => $data) {
-            $this->autoData($data, self::ACTION_UPDATE);
-            $this->preFieldOnUpdate($data);
-            $this->deleteFieldOnUpdate($data);
-            $datas[$key] = $data;
-        }
-        // $this->initQuery();
-
-        return parent::update($datas);
-    }
+    // public function update(array $datas)
+    // {
+    //     if (count($datas) === count($datas, 1)) {
+    //         $datas = [$datas];
+    //     }
+    //     foreach ($datas as $key => $data) {
+    //         $this->autoData($data, self::ACTION_UPDATE);
+    //         $this->preFieldOnUpdate($data);
+    //         $this->deleteFieldOnUpdate($data);
+    //         $datas[$key] = $data;
+    //     }
+    //     // $this->initQuery();
+    //
+    //     return parent::update($datas);
+    // }
 
     /**
      * 字段数据填充

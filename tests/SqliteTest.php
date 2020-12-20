@@ -421,4 +421,10 @@ class SqliteTest extends Base
         //                                      ])
         //                                      ->delete());
     }
+
+    public function testGetTables()
+    {
+        $tables = $this->db->getTables();
+        $this->assertTrue(in_array('kl_article', $tables));
+    }
 }
