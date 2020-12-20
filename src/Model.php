@@ -58,10 +58,10 @@ abstract class Model extends Mokuyu
      */
     protected array $beforeUpdateDelete = [];
 
-    /**
-     * @var Mokuyu|null 数据库连接对象
-     */
-    protected ?Mokuyu $db = null;
+    // /**
+    //  * @var Mokuyu|null 数据库连接对象
+    //  */
+    // protected ?Mokuyu $db = null;
 
     /**
      * 查询字段,如果使用字段映射(fieldMap)的话,请使用字段的别名
