@@ -8,8 +8,9 @@ use mokuyu\database\Model;
 
 class Article extends Model
 {
+    protected array $auto = ['views'];
     protected array $fieldMap
-        = [
+                          = [
             //格式为 别名(查询)字段=>数据库真实字段
             'push_time' => 'create_time',
         ];
@@ -22,11 +23,17 @@ class Article extends Model
 
     public function getViewTextAttr($data): int
     {
-        if ($data['views'] > 10) {
+        $views = $data['views'] ?? 0;
+        if ($views > 10) {
             return 10000;
         }
         else {
             return -1;
         }
+    }
+
+    public function setViewsAttr($data)
+    {
+        return $data * 1000;
     }
 }

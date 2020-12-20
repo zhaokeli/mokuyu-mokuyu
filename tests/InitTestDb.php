@@ -17,16 +17,10 @@ class InitTestDb
 
     public static function getSqliteDb()
     {
+        $config = require __DIR__ . '/config.php';
         if (self::$sqliteInstance === null) {
             //初始化后会自动创建数据库文件
-            self::$sqliteInstance = new Mokuyu([
-                // 必须配置项
-                'database_type' => 'sqlite',
-                'database_file' => __DIR__ . '/../test.db',
-                'charset'       => 'utf8',
-                // 可选，定义表的前缀
-                'prefix'        => 'kl_',
-            ]);
+            self::$sqliteInstance = new Mokuyu($config['sqlite']);
             //创建一个表
             self::$sqliteInstance->exec('
 DROP TABLE IF EXISTS "main"."kl_article";
@@ -45,26 +39,7 @@ CREATE TABLE "main"."kl_category" (
 );
 ');
             try {
-                self::$sqliteInstance->setCache(new Cache([
-                    // 缓存类型为File
-                    'type'     => 'redis', //目前支持file和memcache redis
-                    'memcache' => [
-                        'host' => 'localhost',
-                        'port' => 11211,
-                    ],
-                    'redis'    => [
-                        'host'     => '127.0.0.1',
-                        'port'     => 6379,
-                        'index'    => 7,
-                        'password' => 'adminrootkl',
-                    ],
-                    // 全局缓存有效期（0为永久有效）
-                    'expire'   => 24 * 3600,
-                    // 缓存前缀
-                    'prefix'   => 'mokuyu_db',
-                    // 缓存目录
-                    'path'     => '/datacache',
-                ]));
+                self::$sqliteInstance->setCache(new Cache($config['cache']));
             } catch (CacheException $e) {
             }
             self::initSqliteDatabase();
@@ -74,43 +49,11 @@ CREATE TABLE "main"."kl_category" (
 
     public static function getMysqlDb()
     {
+        $config = require __DIR__ . '/config.php';
         if (self::$mysqlInstance === null) {
-            self::$mysqlInstance = new Mokuyu([
-                // 必须配置项
-                'database_type' => 'mysql',
-                'database_name' => $_ENV['test_database_name'],
-                'server'        => $_ENV['test_server'],
-                'username'      => $_ENV['test_username'],
-                'password'      => $_ENV['test_password'],
-                'charset'       => 'utf8',
-                // 可选参数
-                'port'          => 3306,
-                'debug_mode'    => false,
-                'table_mode'    => 1,
-                // 可选，定义表的前缀
-                'prefix'        => $_ENV['test_prefix'],
-            ]);
+            self::$mysqlInstance = new Mokuyu($config['mysql']);
             try {
-                self::$mysqlInstance->setCache(new Cache([
-                    // 缓存类型为File
-                    'type'     => 'redis', //目前支持file和memcache redis
-                    'memcache' => [
-                        'host' => 'localhost',
-                        'port' => 11211,
-                    ],
-                    'redis'    => [
-                        'host'     => '127.0.0.1',
-                        'port'     => 6379,
-                        'index'    => 7,
-                        'password' => 'adminrootkl',
-                    ],
-                    // 全局缓存有效期（0为永久有效）
-                    'expire'   => 24 * 3600,
-                    // 缓存前缀
-                    'prefix'   => 'mokuyu_db',
-                    // 缓存目录
-                    'path'     => '/datacache',
-                ]));
+                self::$mysqlInstance->setCache(new Cache($config['cache']));
             } catch (CacheException $e) {
             }
             self::initMysqlDatabase();
@@ -173,8 +116,10 @@ CREATE TABLE `kl_article` (
   `title` varchar(255) NOT NULL DEFAULT '',
   `category_id` int(11) NOT NULL DEFAULT '0' COMMENT '分类id',
   `views` int(11) NOT NULL DEFAULT '0' COMMENT '浏览次数',
-  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `create_time` int(11) NOT NULL DEFAULT '0' COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT '0' COMMENT '更新时间',
+  `auto_create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `auto_update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `value` varchar(255) NULL DEFAULT '' COMMENT '测试可空值' ,
   PRIMARY KEY (`article_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -199,6 +144,8 @@ eot;
                 'title'       => 'this is php data!' . rand(100, 1000),
                 'category_id' => rand(1, 3),
                 'views'       => rand(100, 1000),
+                'create_time' => time() + rand(-3600 * 24, 3600 * 24),
+                'update_time' => time() + rand(-3600 * 24, 3600 * 24),
             ];
         }
         $result            = self::$mysqlInstance->abort(false)->table('article')->add($datas);

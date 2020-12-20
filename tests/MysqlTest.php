@@ -8,6 +8,7 @@ use Exception;
 use PDOException;
 use PDOStatement;
 use stdClass;
+use mokuyu\database\exception\QueryParamException;
 
 class MysqlTest extends Base
 {
@@ -35,11 +36,24 @@ class MysqlTest extends Base
      */
     public function testAdd()
     {
-        //测试非法字段过滤完后,没有可更新的数据
+
+        //测试非法字段过滤完后,没有可更新的数据,关闭调试模式后不报错
+        $this->db->debug(false);
         $this->assertEquals(0, $this->db->table('article')->abort(false)->add([
             'title1' => 'this is php data!' . rand(100, 1000),
             'views1' => rand(100, 1000),
         ]), $this->db->getLastError());
+
+        try {
+            //测试非法字段过滤完后,没有可更新的数据，开启调试后报错
+            $this->db->debug(true);
+            $this->assertEquals(0, $this->db->table('article')->abort(false)->add([
+                'title1' => 'this is php data!' . rand(100, 1000),
+                'views1' => rand(100, 1000),
+            ]), $this->db->getLastError());
+        } catch (QueryParamException $e) {
+            $this->assertTrue($e instanceof QueryParamException);
+        }
         //添加单个
         $result = $this->db->abort(false)->table('article')->add([
             'title'        => 'this is php data!' . rand(100, 1000),
@@ -51,7 +65,8 @@ class MysqlTest extends Base
         ]);
         $this->assertGreaterThan(0, $result, $this->db->getLastError());
 
-        //测试空表时异常
+        //测试空表时异常,关闭调试时
+        $this->db->debug(false);
         $result = $this->db->abort(false)->add([
             'title' => 'this is php data!' . rand(100, 1000),
             'views' => rand(100, 1000),
@@ -92,7 +107,7 @@ class MysqlTest extends Base
     public function testUpdate()
     {
         $this->assertEquals(0, $this->db->save([]), $this->db->getLastError());
-        $this->assertEquals(0, $this->db->update([]), $this->db->getLastError());
+        $this->assertEquals(0, $this->db->debug(false)->update([]), $this->db->getLastError());
         //更新单条数据
         $this->assertGreaterThan(0, $this->db
             ->table('article')
@@ -107,6 +122,7 @@ class MysqlTest extends Base
         //测试批量带条件报异常
         $this->assertEquals(0, $this->db
             ->table('article')
+            ->debug(false)
             ->where('1=1')
             ->update([
                 [
@@ -235,7 +251,7 @@ class MysqlTest extends Base
             'update_time[~]'  => ['%10', '20%', '30'],
             'article_id[~]'   => 1,
         ])->select());
-        $this->assertEquals(0, $this->db->select());
+        $this->assertCount(0, $this->db->debug(false)->select());
         $this->assertCount(11, $this->db->table('article')->limit(11)->select());
 
         //下面会返回41这一行
@@ -255,7 +271,7 @@ class MysqlTest extends Base
 
     public function testGet()
     {
-        $this->assertFalse($this->db->get());
+        $this->assertFalse($this->db->debug(false)->get());
         $this->assertGreaterThan(0, $this->db->table('article')->field('article.views as nums')->get());
         $this->assertCount(11, $this->db->table('article')->limit(11)->select());
         $this->assertCount(2, $this->db->table('article')->field('title as article_title,views[nums]')->get());
@@ -350,8 +366,8 @@ class MysqlTest extends Base
 
     public function testDebug()
     {
-        $this->db->debug(false);
-        $this->assertFalse($this->db->debug());
+        $this->db->setDebug(false);
+        $this->assertFalse($this->db->isDebug());
     }
 
     public function testOther()
@@ -404,7 +420,7 @@ class MysqlTest extends Base
         $this->assertIsString($this->db->table('Article')->fetchSql(true)->paginate(3));
         $this->db->table('Article')->page(2);
         $this->db->table('Article')->paginate(3);
-        $this->assertFalse($this->db->paginate(3));
+        $this->assertEquals(0, $this->db->debug(false)->paginate(3)['total']);
         $this->db->table('Article')->field('views,title')->paginate(3);
         $this->assertTrue(true);
     }
@@ -412,7 +428,7 @@ class MysqlTest extends Base
     public function testQueryCache()
     {
         $this->db->clearCache();
-        $this->db->debug(false);
+        $this->db->setDebug(false);
         $this->db->table('article')->useWriteConn(true)->cache(600)->where(['article_id' => 91])->select();
         $this->db->table('article')->cache(600)->where(['article_id' => 92])->get();
         $this->db->table('article')->cache('testarticle', 600)->where(['article_id' => 92])->get();

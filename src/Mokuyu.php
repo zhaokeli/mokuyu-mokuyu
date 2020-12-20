@@ -20,6 +20,7 @@ use Psr\SimpleCache\CacheInterface;
 use mokuyu\database\exception\QueryParamException;
 use mokuyu\database\exception\QueryResultException;
 use Throwable;
+use mokuyu\database\exception\QueryPDOException;
 
 /**
  * @property PDO   pdoWrite
@@ -28,6 +29,54 @@ use Throwable;
  */
 class Mokuyu
 {
+    /**
+     * 事件类型：重置请求参数
+     * 参数：Mokuyu
+     */
+    public const EVENT_TYPE_RESET_QUERYPARAM = 'InitQueryParam';
+
+    /**
+     * 事件类型：预处理请求参数之前
+     * 参数：Mokuyu
+     */
+    public const EVENT_TYPE_PRE_QUERYPARAM_BEFORE = 'PreQueryParamBefore';
+
+    /**
+     * 事件类型：更新之前
+     * 参数：Mokuyu,sql,bindParam
+     */
+    public const EVENT_TYPE_UPDATE_BEFORE = 'UpdateBefore';
+
+    /**
+     * 事件类型：更新之后
+     * 参数：Mokuyu,sql,bindParam,result
+     */
+    public const EVENT_TYPE_UPDATE_AFTER = 'UpdateAfter';
+
+    /**
+     * 事件类型：插入之前
+     * 参数：Mokuyu,sql,bindParam
+     */
+    public const EVENT_TYPE_INSERT_BEFORE = 'InsertBefore';
+
+    /**
+     * 事件类型：插入之后
+     * 参数：Mokuyu,sql,bindParam,result
+     */
+    public const EVENT_TYPE_INSERT_AFTER = 'InsertAfter';
+
+    /**
+     * 事件类型：执行过的sql日志
+     * 参数：Mokuyu,time(S.s),sql
+     */
+    public const EVENT_TYPE_SQL_LOG = 'SQLLog';
+
+    /**
+     * pdo实例连接列表
+     * @var array
+     */
+    private static array $connections = [];
+
     /**
      * query中绑定的参数数组
      * @var array
@@ -68,7 +117,8 @@ class Mokuyu
      * 开启调式,关闭后如果有缓存缓存会缓存主键,表字段等信息
      * @var boolean
      */
-    protected bool $debug = false;
+    protected bool $debug    = false;
+    private bool   $temDebug = false;
 
     /**
      * 错误信息保存
@@ -89,10 +139,11 @@ class Mokuyu
      * @var array
      */
     protected array $fieldMap
-        = [
+                                 = [
             //格式为 别名(查询)字段=>数据库真实字段
             // 'push_time' => 'create_time',
         ];
+    private array   $temFieldMap = [];
 
     /**
      * 设置当前数据表字段风格,传入的字段会转为此种风格后再去查询,fieldMap中设置的(别名/真实)字段同样会被转换
@@ -250,6 +301,13 @@ class Mokuyu
      * @var int
      */
     protected int $reconnectTimes = 0;
+
+
+    /**
+     * 事件列表
+     * @var array
+     */
+    protected array $eventList = [];
 
     /**
      * 初始化连接
@@ -426,20 +484,38 @@ class Mokuyu
     }
 
     /**
-     * 设置或获取调试状态
+     * 单次设置调试状态
      * @DateTime 2020-01-10
      * @Author   mokuyu
-     * @param null $debug
-     * @return bool|null
+     * @param bool $debug
+     * @return Mokuyu
      */
-    public function debug($debug = null): ?bool
+    public function debug($debug = false): Mokuyu
     {
-        if ($debug !== null) {
-            $this->debug = $debug;
-        }
+        // if ($debug !== null) {
+        $this->temDebug = $debug;
+        // }
 
+        // return $this->debug;
+        return $this;
+    }
+
+    /**
+     * 全局设置调试模式
+     * @param bool $isDebug
+     */
+    public function setDebug(bool $isDebug = false)
+    {
+        $this->debug = $isDebug;
+    }
+
+    /**
+     * 返回当前数据库调试模式
+     * @return bool
+     */
+    public function isDebug(): bool
+    {
         return $this->debug;
-
     }
 
     /**
@@ -451,6 +527,7 @@ class Mokuyu
      */
     public function delete($id = 0)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             if (empty($this->queryParams['srcTable'])) {
                 return 0;
@@ -546,6 +623,7 @@ class Mokuyu
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
             $this->appendSqlLogs(($t2 - $t1), $sql);
+            $this->trigger(self::EVENT_TYPE_SQL_LOG, [($t2 - $t1), $sql]);
             //因为exec执行的命令除了 select insert update外不一定会有影响的行数,下面判断执行的状态码
             if (!$result
                 && stripos(trim($sql), 'select') !== 0
@@ -571,7 +649,7 @@ class Mokuyu
             }
             $isTransaction && $this->rollback();
             if ($e instanceof PDOException) {
-                throw new PDOException($sql, $this->dbConfig, $this->greateSQL($sql, $this->bindParam));
+                throw new QueryPDOException($e->getMessage(), $this->greateSQL($sql, $this->bindParam), $this->dbConfig, $e->getCode());
             }
             else {
                 throw $e;
@@ -589,8 +667,9 @@ class Mokuyu
      */
     public function close(): Mokuyu
     {
-        $this->pdoRead  = null;
-        $this->pdoWrite = null;
+        $this->pdoRead     = null;
+        $this->pdoWrite    = null;
+        self::$connections = [];
         return $this;
     }
 
@@ -629,7 +708,8 @@ class Mokuyu
      */
     public function fieldMap(array $map): Mokuyu
     {
-        $this->fieldMap = $map;
+        // $this->fieldMap    = $map;
+        $this->temFieldMap = $map;
 
         return $this;
     }
@@ -662,6 +742,7 @@ class Mokuyu
      */
     public function fieldOperation(string $field, int $num = 0, string $operation = '+')
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             $oper = ['+', '-', '*', '/'];
             if (!in_array($operation, $oper)) {
@@ -677,7 +758,12 @@ class Mokuyu
             return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return 0;
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return 0;
+            }
         }
     }
 
@@ -702,6 +788,7 @@ class Mokuyu
      */
     public function get(int $id = 0)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             $this->limit(1);
             //这个列要放这里取要不然请求过后配置就被清空啦
@@ -717,7 +804,7 @@ class Mokuyu
             }
             $cacheData = $this->getQueryCache();
             $data      = null;
-            if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
+            if ($cacheData === null || $cacheData['data'] === null || $this->temDebug) {
                 $this->buildSqlConf();
                 //处理好后把这个字段保存下来,不然下面执行过后数据会被重置
                 $columns = $this->queryParams['field'];
@@ -766,7 +853,12 @@ class Mokuyu
             return $data;
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return false;
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return false;
+            }
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } finally {
@@ -1123,6 +1215,12 @@ class Mokuyu
             return $redata;
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return false;
+            }
             return [];
         }
     }
@@ -1150,6 +1248,7 @@ class Mokuyu
      */
     public function has()
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             $this->queryParams['LIMIT'] = ' LIMIT 1';
             if (empty($this->queryParams['srcTable'])) {
@@ -1166,7 +1265,12 @@ class Mokuyu
             return $query->fetchColumn() == 1;
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return false;
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return false;
+            }
         } finally {
             $this->initQueryParams();
         }
@@ -1214,6 +1318,7 @@ class Mokuyu
      */
     public function insert(array $datas)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             $srcTable = $this->queryParams['table'];
             $this->buildSqlConf();
@@ -1294,13 +1399,20 @@ class Mokuyu
                 throw new QueryResultException('', 0, null, $result);
             }
             // $lastId = ;
-
-            return $this->pdoWrite->lastInsertId() ?: $result;
+            $this->trigger(self::EVENT_TYPE_INSERT_BEFORE, [$sql ?? '', $this->bindParam]);
+            $result = $this->pdoWrite->lastInsertId() ?: $result;
+            $this->trigger(self::EVENT_TYPE_INSERT_AFTER, [$sql ?? '', $this->bindParam, $result]);
+            return $result;
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return 0;
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return 0;
+            }
         } finally {
             $this->initQueryParams();
         }
@@ -1435,13 +1547,14 @@ class Mokuyu
      */
     public function paginate(int $page = 1, int $pageSize = 15)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             $temBak = [
                 'queryParams'  => $this->queryParams,
                 'bindParam'    => $this->bindParam,
                 'temFieldMode' => $this->temFieldMode,
                 'temTableMode' => $this->temTableMode,
-                'fieldMap'     => $this->fieldMap,
+                'temFieldMap'  => $this->temFieldMap,
                 'isFetchSql'   => $this->isFetchSql,
             ];
             //统计数量时只需要第一个有效字段做为统计字段
@@ -1474,18 +1587,23 @@ class Mokuyu
 
             return [
                 'list'     => $query->fetchAll(PDO::FETCH_ASSOC),
-                'count'    => $count,
+                'total'    => $count,
                 'page'     => $page,
                 'pageSize' => $pageSize,
             ];
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return [
-                'list'     => [],
-                'count'    => 0,
-                'page'     => $page,
-                'pageSize' => $pageSize,
-            ];
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return [
+                    'list'     => [],
+                    'total'    => 0,
+                    'page'     => $page,
+                    'pageSize' => $pageSize,
+                ];
+            }
         } finally {
             $this->initQueryParams();
         }
@@ -1542,6 +1660,7 @@ class Mokuyu
             $t2 = microtime(true);
             // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
             $this->appendSqlLogs(($t2 - $t1), $sql);
+            $this->trigger(self::EVENT_TYPE_SQL_LOG, [($t2 - $t1), $sql]);
             if ($pdo->errorCode() != '00000') {
                 $this->errors[] = $pdo->errorInfo()[2];
                 $this->showError(end($this->errors));
@@ -1564,7 +1683,7 @@ class Mokuyu
                 return $this->close()->query($sql, $param);
             }
             if ($e instanceof PDOException) {
-                throw new PDOException($sql, $this->dbConfig, $this->greateSQL($sql, $this->bindParam));
+                throw new QueryPDOException($e->getMessage(), $this->greateSQL($sql, $this->bindParam), $this->dbConfig, $e->getCode());
             }
             else {
                 throw $e;
@@ -1613,6 +1732,7 @@ class Mokuyu
      */
     public function save($datas)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         if (empty($this->queryParams['srcTable'])) {
             return 0;
         }
@@ -1639,13 +1759,14 @@ class Mokuyu
      */
     public function select()
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             if (empty($this->queryParams['srcTable'])) {
                 throw new QueryParamException('数据表不能为空');
                 // return false;
             }
             $cacheData = $this->getQueryCache();
-            if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
+            if ($cacheData === null || $cacheData['data'] === null || $this->temDebug) {
                 $this->buildSqlConf();
                 $sql   = $this->buildSelect();
                 $query = $this->query($sql);
@@ -1667,7 +1788,13 @@ class Mokuyu
             return $cacheData;
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return [];
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return [];
+            }
+
         } finally {
             $this->initQueryParams();
         }
@@ -1683,6 +1810,7 @@ class Mokuyu
      */
     public function chunk(int $count, Closure $callback, string $sortField = null, string $sortType = 'asc')
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         $sortType = strtolower($sortType);
         if ($sortField === null) {
             $sortField = $this->getPK();
@@ -1695,7 +1823,7 @@ class Mokuyu
             'bindParam'    => $this->bindParam,
             'temFieldMode' => $this->temFieldMode,
             'temTableMode' => $this->temTableMode,
-            'fieldMap'     => $this->fieldMap,
+            'temFieldMap'  => $this->temFieldMap,
             'isFetchSql'   => $this->isFetchSql,
         ];
         while ($list = $this->select()) {
@@ -1720,6 +1848,7 @@ class Mokuyu
      */
     public function column($field, string $key = null, bool $isDeleteIndexKey = false)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         if (is_string($field)) {
             $field = explode(',', $field);
         }
@@ -1736,7 +1865,7 @@ class Mokuyu
             }
         }
         $cacheData = $this->getQueryCache();
-        if ($cacheData === null || $cacheData['data'] === null || $this->debug) {
+        if ($cacheData === null || $cacheData['data'] === null || $this->temDebug) {
             $data = $this->select();
             if ($key === null) {
                 // if ($field[0] === '*') {
@@ -1879,6 +2008,7 @@ class Mokuyu
      */
     public function update(array $datas)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             if (empty($this->queryParams['srcTable'])) {
                 // return 0;
@@ -1998,11 +2128,18 @@ class Mokuyu
                 }
                 $isMulData && $index++;
             }
-
-            return $this->exec($sql);
+            $this->trigger(self::EVENT_TYPE_UPDATE_BEFORE, [$sql, $this->bindParam]);
+            $result = $this->exec($sql);
+            $this->trigger(self::EVENT_TYPE_UPDATE_AFTER, [$sql ?? '', $this->bindParam, $result]);
+            return $result;
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return 0;
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return 0;
+            }
         } finally {
             $this->initQueryParams();
         }
@@ -2074,6 +2211,9 @@ class Mokuyu
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
                 $this->appendErrorLogs($e->getMessage());
+                if ($this->temDebug) {
+                    throw $e;
+                }
             }
             $data = [$data => $value2];
         }
@@ -2113,6 +2253,9 @@ class Mokuyu
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
                 $this->appendErrorLogs($e->getMessage());
+                if ($this->temDebug) {
+                    throw $e;
+                }
             }
             $data = [$data => $value2];
         }
@@ -2437,111 +2580,116 @@ class Mokuyu
      */
     protected function buildPDO(array $options): PDO
     {
+        $connectionKey = md5(json_encode($options));
         try {
-            $commands = [];
-            $dsn      = '';
+            if (!isset(self::$connections[$connectionKey])) {
+                $commands = [];
+                $dsn      = '';
 
-            // if (is_array($options)) {
-            //     foreach ($options as $option => $value) {
-            //         $option        = $this->parseName($option, 2);
-            //         $this->$option = $value;
-            //     }
-            // } else {
-            //     return null;
-            // }
+                // if (is_array($options)) {
+                //     foreach ($options as $option => $value) {
+                //         $option        = $this->parseName($option, 2);
+                //         $this->$option = $value;
+                //     }
+                // } else {
+                //     return null;
+                // }
 
-            // if (isset($this->port) && is_int($this->port * 1)) {
-            // $port = $this->port;
-            // }
-            $server   = $options['server'];
-            $port     = $options['port'];
-            $username = $options['username'];
-            $password = $options['password'];
+                // if (isset($this->port) && is_int($this->port * 1)) {
+                // $port = $this->port;
+                // }
+                $server   = $options['server'];
+                $port     = $options['port'];
+                $username = $options['username'];
+                $password = $options['password'];
 
-            $type    = strtolower($this->databaseType);
-            $is_port = isset($port);
+                $type    = strtolower($this->databaseType);
+                $is_port = isset($port);
 
-            // if (isset($options['prefix'])) {
-            //     $this->prefix = $options['prefix'];
-            // }
+                // if (isset($options['prefix'])) {
+                //     $this->prefix = $options['prefix'];
+                // }
 
-            switch ($type) {
-                case 'mariadb':
-                    $type = 'mysql';
+                switch ($type) {
+                    case 'mariadb':
+                        $type = 'mysql';
 
-                case 'mysql':
-                    if ($this->socket) {
-                        $dsn = $type . ':unix_socket=' . $this->socket . ';dbname=' . $this->databaseName;
-                    }
-                    else {
+                    case 'mysql':
+                        if ($this->socket) {
+                            $dsn = $type . ':unix_socket=' . $this->socket . ';dbname=' . $this->databaseName;
+                        }
+                        else {
+                            $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
+                        }
+
+                        // Make MySQL using standard quoted identifier
+                        $commands[] = 'SET SQL_MODE=ANSI_QUOTES';
+                        break;
+
+                    case 'pgsql':
                         $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
-                    }
+                        break;
 
-                    // Make MySQL using standard quoted identifier
-                    $commands[] = 'SET SQL_MODE=ANSI_QUOTES';
-                    break;
+                    case 'sybase':
+                        $dsn = 'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                        break;
 
-                case 'pgsql':
-                    $dsn = $type . ':host=' . $server . ($is_port ? ';port=' . $port : '') . ';dbname=' . $this->databaseName;
-                    break;
+                    case 'oracle':
+                        $dbname = $server
+                            ?
+                            '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName
+                            :
+                            $this->databaseName;
+                        // $conn_string = '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))';
+                        $dsn = 'oci:dbname=' . $dbname . ($this->charset ? ';charset=' . $this->charset : '');
+                        break;
 
-                case 'sybase':
-                    $dsn = 'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
-                    break;
+                    case 'mssql':
+                        $dsn = strstr(PHP_OS, 'WIN')
+                            ?
+                            'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName
+                            :
+                            'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
 
-                case 'oracle':
-                    $dbname = $server
-                        ?
-                        '//' . $server . ($is_port ? ':' . $port : ':1521') . '/' . $this->databaseName
-                        :
-                        $this->databaseName;
-                    // $conn_string = '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=XE)))';
-                    $dsn = 'oci:dbname=' . $dbname . ($this->charset ? ';charset=' . $this->charset : '');
-                    break;
+                        // Keep MSSQL QUOTED_IDENTIFIER is ON for standard quoting
+                        $commands[] = 'SET QUOTED_IDENTIFIER ON';
+                        break;
 
-                case 'mssql':
-                    $dsn = strstr(PHP_OS, 'WIN')
-                        ?
-                        'sqlsrv:server=' . $server . ($is_port ? ',' . $port : '') . ';database=' . $this->databaseName
-                        :
-                        'dblib:host=' . $server . ($is_port ? ':' . $port : '') . ';dbname=' . $this->databaseName;
+                    case 'sqlite':
+                        $dsn            = $type . ':' . $this->databaseFile;
+                        $this->username = null;
+                        $this->password = null;
+                        break;
+                }
 
-                    // Keep MSSQL QUOTED_IDENTIFIER is ON for standard quoting
-                    $commands[] = 'SET QUOTED_IDENTIFIER ON';
-                    break;
+                if (
+                    in_array($type, ['mariadb', 'mysql', 'pgsql', 'sybase', 'mssql']) &&
+                    $this->charset
+                ) {
+                    $commands[] = "SET NAMES '" . $this->charset . "'";
+                }
+                if (!$dsn) {
+                    throw new PDOException('database dsn is not Empty', 1);
 
-                case 'sqlite':
-                    $dsn            = $type . ':' . $this->databaseFile;
-                    $this->username = null;
-                    $this->password = null;
-                    break;
+                }
+                $pdo = new PDO(
+                    $dsn,
+                    $username,
+                    $password,
+                    $this->options
+                );
+
+                foreach ($commands as $value) {
+                    $pdo->exec($value);
+                }
+                self::$connections[$connectionKey] = $pdo;
+                // return $pdo;
             }
-
-            if (
-                in_array($type, ['mariadb', 'mysql', 'pgsql', 'sybase', 'mssql']) &&
-                $this->charset
-            ) {
-                $commands[] = "SET NAMES '" . $this->charset . "'";
-            }
-            if (!$dsn) {
-                throw new PDOException('database dsn is not Empty', 1);
-
-            }
-            $pdo = new PDO(
-                $dsn,
-                $username,
-                $password,
-                $this->options
-            );
-
-            foreach ($commands as $value) {
-                $pdo->exec($value);
-            }
-
-            return $pdo;
         } catch (PDOException $e) {
             throw $e;
         }
+        return self::$connections[$connectionKey];
+
     }
 
     /**
@@ -2706,7 +2854,7 @@ class Mokuyu
     protected function cacheAction(string $key, $value = null, int $expire = 3600 * 24)
     {
         try {
-            if ($this->debug || $this->cache === null) {
+            if ($this->temDebug || $this->cache === null) {
                 return null;
             }
             $key = 'mokuyu:' . $key;
@@ -2775,7 +2923,8 @@ class Mokuyu
         $this->temFieldMode = $this->fieldMode;
         $this->temTableMode = $this->tableMode;
         $this->isAbort      = false;
-        $this->fieldMap     = [];
+        $this->temFieldMap  = $this->fieldMap;
+        $this->temDebug     = $this->debug;
         $this->queryParams  = [
             'table'        => '',
             'srcTable'     => '', //传入的原始表
@@ -2795,6 +2944,7 @@ class Mokuyu
             'queryCache'   => null,
         ];
         $this->bindParam    = [];
+        $this->trigger(self::EVENT_TYPE_RESET_QUERYPARAM, []);
     }
 
     /**
@@ -2898,9 +3048,9 @@ class Mokuyu
         }
         $arr['field'] || ($arr['field'] = $field);
         //转成真实字段
-        if (isset($this->fieldMap[$arr['field']])) {
+        if (isset($this->temFieldMap[$arr['field']])) {
             $arr['alias'] || ($arr['alias'] = $arr['field']);
-            $arr['field'] = $this->fieldMap[$arr['field']];
+            $arr['field'] = $this->temFieldMap[$arr['field']];
             // $arr['isMap'] = true;
         }
         //按字段模式转换
@@ -3185,6 +3335,7 @@ class Mokuyu
      */
     protected function summary(string $func, array $field)
     {
+        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
         try {
             //如果之前通过field方法传过字段就设置上去，*为默认,排除
             if ($this->queryParams['field'] && $this->queryParams['field'] !== '*') {
@@ -3277,7 +3428,12 @@ class Mokuyu
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
             $this->appendErrorLogs($e->getMessage());
-            return 0;
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return 0;
+            }
         }
     }
 
@@ -3294,5 +3450,48 @@ class Mokuyu
         }
 
         return $table;
+    }
+
+    /**
+     * 添加事件监听器,如果处理器返回true则事件不再往下传递
+     * @param string $eventType
+     * @param        $handler
+     */
+    public function addEventListener(string $eventType, $handler)
+    {
+        $hashKey                               = md5(json_encode($handler));
+        $this->eventList[$eventType][$hashKey] = $handler;
+    }
+
+    /**
+     * 移除事件监听器
+     * @param string $eventType
+     * @param        $handler
+     */
+    public function removeEventListener(string $eventType, $handler)
+    {
+        $hashKey = md5(json_encode($handler));
+        if (isset($this->eventList[$eventType][$hashKey])) {
+            unset($this->eventList[$eventType][$hashKey]);
+        }
+    }
+
+    /**
+     * 触发指定事件
+     * @param string $eventType
+     * @param array  $eventData
+     */
+    public function trigger(string $eventType, array $eventData = [])
+    {
+        $events = $this->eventList[$eventType] ?? [];
+        foreach ($events as $handler) {
+            if (is_callable($handler)) {
+                array_unshift($eventData, $this);
+                $result = call_user_func_array($handler, [$eventData]);
+                if ($result === true) {
+                    return;
+                }
+            }
+        }
     }
 }

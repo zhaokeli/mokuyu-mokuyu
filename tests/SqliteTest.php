@@ -8,10 +8,11 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 use PDOException;
 use Exception;
+use mokuyu\database\Mokuyu;
 
 class SqliteTest extends Base
 {
-    protected $db = null;
+    protected ?Mokuyu $db = null;
 
     public function setUp(): void
     {
@@ -76,7 +77,7 @@ class SqliteTest extends Base
             'update_time[~]'  => ['%10', '20%', '30'],
             'article_id[~]'   => 1,
         ])->select());
-        $this->assertEquals(0, $this->db->select());
+        $this->assertCount(0, $this->db->select());
         $this->assertCount(11, $this->db->table('article')->limit(11)->select());
 
         //下面会返回41这一行

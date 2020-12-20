@@ -6,10 +6,11 @@ namespace mokuyu\database\tests;
 
 use PHPUnit\Framework\TestCase;
 use PDOStatement;
+use mokuyu\database\Mokuyu;
 
 class Base extends TestCase
 {
-    protected $db = null;
+    protected ?Mokuyu $db = null;
 
     /**
      * 返回文章浏览量

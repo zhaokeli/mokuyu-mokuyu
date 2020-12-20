@@ -8,62 +8,8 @@ use Psr\SimpleCache\CacheInterface;
 
 /**
  * 模型类,实例化一次进行一次查询
- * @method static abort(bool $isAbort = true)
- * @method static avg(...$field)
- * @method static beginTransaction()
- * @method static chunk(int $nums, Closure $callback, string $field = null, string $sort = 'asc')
- * @method static clearCache()
- * @method static column($field, string $key = null, bool $isDelKey = false)
- * @method static commit()
- * @method static count(string $field = '*')
- * @method static debug($debug = null)
- * @method static delete($id = 0)
- * @method static error()
- * @method static exec(string $sql, array $param = [])
- * @method static fetchSql(bool $bo = true)
- * @method static field($field)
- * @method static fieldMap(array $map)
- * @method static fieldMode(int $type = 0)
- * @method static fieldOperation(string $field, int $num = 0, string $operation = '+')
- * @method static forceIndex(string $field)
- * @method static get(int $id = 0)
- * @method static getFields(): array
- * @method static getLastError()
- * @method static getLastSql()
- * @method static getPDO(bool $isWrite = false): PDO
- * @method static getPK()
- * @method static getQueryParams(): array
- * @method static getWhere(array $data = []): array
- * @method static group(string $data)
- * @method static has()
- * @method static info()
- * @method static insert(array $datas)
- * @method static join(array $data)
- * @method static limit($start, $end = null)
- * @method static log()
- * @method static max(...$field)
- * @method static min(...$field)
- * @method static order($data)
- * @method static page(int $page = 1, int $pageSize = 15)
- * @method static paginate(int $page = 1, int $pageSize = 15)
- * @method static query(string $sql, array $param = [])
- * @method static rand()
- * @method static rollback()
- * @method static save($datas)
- * @method static select()
- * @method static setBindParam(array $value): void
- * @method static setCache(CacheInterface $obj): void
- * @method static setDec(string $field, int $num = 1)
- * @method static setInc(string $field, int $num = 1)
- * @method static sum(...$field)
- * @method static table(string $name)
- * @method static tableMode(int $type = 0)
- * @method static transaction(Closure $callback)
- * @method static useWriteConn()
- * @method static where($data, $value = null, $value2 = null)
- * @method static whereOr($data, $value = null, $value2 = null)
  */
-abstract class Model
+abstract class Model extends Mokuyu
 {
     /**
      * 插入操作
@@ -126,17 +72,18 @@ abstract class Model
      * @var array
      */
     protected array $fieldMap
-        = [
+                                 = [
             //格式为 别名(查询)字段=>数据库真实字段
             // 'push_time' => 'create_time',
         ];
-
+    private array   $temFieldMap = [];
     /**
      * 设置当前数据表字段风格,传入的字段会转为此种风格后再去查询,fieldMap中设置的(别名/真实)字段同样会被转换
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
      * @var int
      */
-    protected int $fieldMode = 0;
+    protected int $fieldMode    = 0;
+    private int   $temFieldMode = 0;
 
 
     /**
@@ -174,7 +121,8 @@ abstract class Model
      * 0:原样不动，1:转换为下划线风格，2:转换为驼峰风格
      * @var int
      */
-    protected int $tableMode = 1;
+    protected int $tableMode    = 1;
+    private int   $temTableMode = 1;
 
     /**
      * 追加字段/属性
@@ -185,10 +133,10 @@ abstract class Model
     /**
      * 初始化模型
      * Model constructor.
-     * @param Mokuyu $db
-     * @param null   $tableName
+     * @param array $config
+     * @param null  $tableName
      */
-    public function __construct(Mokuyu $db, $tableName = null)
+    public function __construct(array $config = [], $tableName = null)
     {
         if ($tableName !== null) {
             $this->tableName = $tableName;
@@ -196,23 +144,63 @@ abstract class Model
         if ($this->tableName === null) {
             $this->tableName = basename(str_replace('\\', '/', static::class));
         }
-        $this->db = $db;
+        // $this = $db;
+        $this->addEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
+        $this->addEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
+        $this->handlerResetQueryParam();
+        parent::__construct($config);
     }
 
-    public function __call(string $method, array $params)
+    /**
+     * 重置单次请求的参数值
+     */
+    public function handlerResetQueryParam()
     {
-        $method = strtolower($method);
-        if (in_array($method, explode(',', strtolower('select,column,chunk,insert,update,delete,save,get,has,paginate,min,max,avg,sum,count,getPK,getFields,setInc,setDec,fieldOperation')))) {
-            $this->initQuery();
-        }
-        $result = call_user_func_array([$this->db, $method], $params);
-        if ($result instanceof Mokuyu) {
-            return $this;
-        }
-        //追加字段
-        // if (in_array($method, ['select', 'get'])) {
-        is_array($result) && $this->parseAppendField($result);
+        // $this->temFieldMode = $this->fieldMode;
+        // $this->temTableMode = $this->tableMode;
+        // $this->temFieldMap  = $this->fieldMap;
+        $this->table($this->tableName);
+        // if ($isRemoveListener || !isset($isRemoveListener)) {
+        //     $this->removeEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
+        //     $this->removeEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
         // }
+    }
+
+    // public function __call(string $method, array $params)
+    // {
+    //     $method = strtolower($method);
+    //     // if (in_array($method, explode(',', strtolower('select,column,chunk,insert,update,delete,save,get,has,paginate,min,max,avg,sum,count,getPK,getFields,setInc,setDec,fieldOperation')))) {
+    //     //     $this->initQuery();
+    //     // }
+    //     $result = call_user_func_array([$this, $method], $params);
+    //     if ($result instanceof Mokuyu) {
+    //         return $this;
+    //     }
+    //     //追加字段
+    //     if (in_array($method, ['select', 'get', 'paginate'])) {
+    //         $this->parseAppendField($result);
+    //     }
+    //     return $result;
+    // }
+
+    public function select()
+    {
+        $result = parent::select();
+        $this->parseAppendField($result);
+        return $result;
+    }
+
+    public function get(int $id = 0)
+    {
+        $result = parent::get($id);
+        $this->parseAppendField($result);
+        return $result;
+    }
+
+    public function paginate(int $page = 1, int $pageSize = 15)
+    {
+        $result = parent::paginate($page, $pageSize);
+        $this->parseAppendField($result);
         return $result;
     }
 
@@ -260,9 +248,9 @@ abstract class Model
             $this->deleteFieldOnInsert($data);
             $datas[$key] = $data;
         }
-        $this->initQuery();
+        // $this->initQuery();
 
-        return $this->db->add($datas);
+        return parent::add($datas);
     }
 
     /**
@@ -281,9 +269,9 @@ abstract class Model
             $this->deleteFieldOnUpdate($data);
             $datas[$key] = $data;
         }
-        $this->initQuery();
+        // $this->initQuery();
 
-        return $this->db->update($datas);
+        return parent::update($datas);
     }
 
     /**
@@ -379,22 +367,40 @@ abstract class Model
         }
     }
 
-    /**
-     * 初始化请求参数
-     */
-    protected function initQuery()
+    public function tableMode(int $type = 0): Model
     {
-        $this->db->table($this->tableName);
-        $this->db->tableMode((int)$this->tableMode);
-        $this->db->fieldMode((int)$this->fieldMode);
-        $this->db->fieldMap($this->fieldMap);
+        $this->temTableMode = $type;
+        return $this;
+    }
 
-        $params = $this->db->getQueryParams();
+    public function fieldMode(int $type = 0): Model
+    {
+        $this->temFieldMode = $type;
+        return $this;
+    }
+
+    public function fieldMap(array $map): Model
+    {
+        $this->temFieldMap = $map;
+        return $this;
+    }
+
+
+    // /**
+    //  * 初始化请求参数
+    //  */
+    public function handlerInitQuery()
+    {
+        parent::tableMode((int)$this->temTableMode);
+        parent::fieldMode((int)$this->temFieldMode);
+        parent::fieldMap($this->temFieldMap);
+
         //如果没有传查询参数就用模型中默认的参数
-        $this->field && !$params['field'] && ($this->db->field($this->field));
-        $this->join && !$params['join'] && ($this->db->join($this->join));
-        $this->where && !$params['where'] && ($this->db->where($this->where));
-        $this->order && !$params['order'] && ($this->db->order($this->order));
-        $this->limit && !$params['limit'] && ($this->db->limit($this->limit));
+        $params = parent::getQueryParams();
+        $this->field && !$params['field'] && (parent::field($this->field));
+        $this->join && !$params['join'] && (parent::join($this->join));
+        $this->where && !$params['where'] && (parent::where($this->where));
+        $this->order && !$params['order'] && (parent::order($this->order));
+        $this->limit && !$params['limit'] && (parent::limit($this->limit));
     }
 }
