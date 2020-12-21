@@ -176,10 +176,13 @@ abstract class Model extends Mokuyu
             $this->tableName = $tableName;
         }
         $this->connect = $config ?: $this->connect;
+        //先初始化数据库
+        parent::__construct($this->connect);
+        //处理表名字
         if ($this->tableName === null) {
             $this->tableName = basename(str_replace('\\', '/', static::class));
 
-            //如果表名字不存在则置空
+            //如果表名字不存在则置空,还没有初始化配置,所以此处不能判断表是否存在
             $tables = $this->getTables();
             if ($tables && !in_array($this->connect['prefix'] . $this->parseName($this->tableName, 1), $tables)) {
                 $this->tableName = '';
@@ -188,7 +191,7 @@ abstract class Model extends Mokuyu
         $this->addEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
         $this->addEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
         $this->handlerResetQueryParam();
-        parent::__construct($this->connect);
+
     }
 
     /**
