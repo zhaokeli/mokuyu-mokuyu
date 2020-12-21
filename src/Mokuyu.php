@@ -78,16 +78,47 @@ class Mokuyu
     private static array $connections = [];
 
     /**
-     * query中绑定的参数数组
+     * 错误信息保存
      * @var array
      */
-    protected array $bindParam = [];
+    protected static array $errors = [];
+
+    /**
+     * 所有执行过的sql语句
+     * @var array
+     */
+    protected static array $logs = [];
+
+    /**
+     * 事务启动次数,事务嵌套时用
+     * @var int
+     */
+    private static int $transTimes = 0;
+
+    /**
+     * 缓存命中多少次
+     * @var int
+     */
+    protected static int $cacheHits = 0;
 
     /**
      * 缓存对象,要实现CacheInterface接口,保存表字段加快速度
      * @var CacheInterface|null
      */
-    protected ?CacheInterface $cache = null;
+    protected static ?CacheInterface $cache = null;
+
+    /**
+     * 当前断线重连次数
+     * @var int
+     */
+    protected static int $reconnectTimes = 0;
+
+    /**
+     * query中绑定的参数数组
+     * @var array
+     */
+    protected array $bindParam = [];
+
 
     /**
      * 数据库数据集
@@ -120,17 +151,6 @@ class Mokuyu
     protected bool $debug    = false;
     private bool   $temDebug = false;
 
-    /**
-     * 错误信息保存
-     * @var array
-     */
-    protected array $errors = [];
-
-    /**
-     * 缓存命中多少次
-     * @var int
-     */
-    protected int $cacheHits = 0;
 
     /**
      * 字段映射
@@ -170,17 +190,7 @@ class Mokuyu
      */
     protected bool $isFetchSql = false;
 
-    /**
-     * 所有执行过的sql语句
-     * @var array
-     */
-    protected array $logs = [];
 
-    /**
-     * 事务启动次数,事务嵌套时用
-     * @var int
-     */
-    private int $transTimes = 0;
     /**
      * pdo配置项
      * @var array
@@ -273,12 +283,6 @@ class Mokuyu
     protected string $yinhao = '"';
 
     /**
-     * 开启缓存后保存的缓存key列表
-     * @var array
-     */
-    // private $cacheKeys = [];
-
-    /**
      * 字段风格
      * @var integer
      */
@@ -295,12 +299,6 @@ class Mokuyu
      * @var bool
      */
     protected bool $breakReconnect = false;
-
-    /**
-     * 当前断线重连次数
-     * @var int
-     */
-    protected int $reconnectTimes = 0;
 
 
     /**
@@ -447,9 +445,9 @@ class Mokuyu
      */
     public function beginTransaction()
     {
-        $this->transTimes++ === 0 && $this->pdoWrite->beginTransaction();
-        if ($this->transTimes <= 0) {
-            $this->transTimes = 1;
+        self::$transTimes++ === 0 && $this->pdoWrite->beginTransaction();
+        if (self::$transTimes <= 0) {
+            self::$transTimes = 1;
         }
         $this->saveTransPoint();
     }
@@ -462,7 +460,7 @@ class Mokuyu
      */
     public function clearCache()
     {
-        $this->cache->clear();
+        self::$cache && self::$cache->clear();
     }
 
     /**
@@ -473,8 +471,8 @@ class Mokuyu
      */
     public function commit()
     {
-        $this->transTimes === 1 && $this->pdoWrite->commit();
-        $this->transTimes--;
+        self::$transTimes === 1 && $this->pdoWrite->commit();
+        self::$transTimes--;
 
     }
 
@@ -575,7 +573,7 @@ class Mokuyu
      */
     public function error(): array
     {
-        return $this->errors;
+        return self::$errors;
     }
 
     /**
@@ -639,17 +637,17 @@ class Mokuyu
                     $result = true;
                 }
                 else {
-                    $this->errors[] = $this->pdoWrite->errorInfo()[2];
-                    $this->showError(end($this->errors));
+                    self::$errors[] = $this->pdoWrite->errorInfo()[2];
+                    $this->showError(end(self::$errors));
                     $result = false;
                 }
             }
             // $this->initQueryParams();
-            $this->reconnectTimes = 0;
+            self::$reconnectTimes = 0;
             return $result;
         } catch (Exception $e) {
-            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
-                ++$this->reconnectTimes;
+            if (self::$reconnectTimes < 4 && $this->isBreak($e)) {
+                ++self::$reconnectTimes;
                 return $this->close()->exec($sql, $param);
             }
             $isTransaction && $this->rollback();
@@ -1042,8 +1040,8 @@ class Mokuyu
 
         return $fieldArr;
         // } catch (Exception $e) {
-        //     if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
-        //         ++$this->reconnectTimes;
+        //     if (self::$reconnectTimes < 4 && $this->isBreak($e)) {
+        //         ++self::$reconnectTimes;
         //         return $this->close()->getFields();
         //     }
         //     throw $e;
@@ -1058,7 +1056,7 @@ class Mokuyu
      */
     public function getLastError()
     {
-        return end($this->errors);
+        return end(self::$errors);
     }
 
     /**
@@ -1069,7 +1067,7 @@ class Mokuyu
      */
     public function getLastSql()
     {
-        return end($this->logs);
+        return end(self::$logs);
     }
 
     /**
@@ -1548,7 +1546,7 @@ class Mokuyu
 
     public function log(): array
     {
-        return $this->logs;
+        return self::$logs;
     }
 
     /**
@@ -1722,8 +1720,8 @@ class Mokuyu
             $this->appendSqlLogs(($t2 - $t1), $sql);
             $this->trigger(self::EVENT_TYPE_SQL_LOG, [($t2 - $t1), $sql]);
             if ($pdo->errorCode() != '00000') {
-                $this->errors[] = $pdo->errorInfo()[2];
-                $this->showError(end($this->errors));
+                self::$errors[] = $pdo->errorInfo()[2];
+                $this->showError(end(self::$errors));
             }
             // $this->initQueryParams();
             if ($isReturnData) {
@@ -1738,8 +1736,8 @@ class Mokuyu
                 return $query;
             }
         } catch (Exception $e) {
-            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
-                ++$this->reconnectTimes;
+            if (self::$reconnectTimes < 4 && $this->isBreak($e)) {
+                ++self::$reconnectTimes;
                 return $this->close()->query($sql, $param);
             }
             if ($e instanceof PDOException) {
@@ -1769,7 +1767,7 @@ class Mokuyu
      */
     private function saveTransPoint()
     {
-        $this->pdoWrite->exec('SAVEPOINT dbback_' . $this->transTimes);
+        $this->pdoWrite->exec('SAVEPOINT dbback_' . self::$transTimes);
     }
 
     /**
@@ -1780,7 +1778,7 @@ class Mokuyu
      */
     public function rollback(): bool
     {
-        return (bool)$this->pdoWrite->exec('ROLLBACK TO SAVEPOINT dbback_' . $this->transTimes--);
+        return (bool)$this->pdoWrite->exec('ROLLBACK TO SAVEPOINT dbback_' . self::$transTimes--);
     }
 
     /**
@@ -1977,9 +1975,9 @@ class Mokuyu
      * @Author   mokuyu
      * @param CacheInterface $obj
      */
-    public function setCache(CacheInterface $obj): void
+    public static function setCache(CacheInterface $obj): void
     {
-        $this->cache = $obj;
+        self::$cache = $obj;
     }
 
     public function setDec(string $field, int $num = 1)
@@ -2046,9 +2044,9 @@ class Mokuyu
             // up in the database. Then we'll re-throw the exception so it can
             // be handled how the developer sees fit for their applications.
         } catch (Exception $e) {
-            if ($this->reconnectTimes < 4 && $this->isBreak($e)) {
-                ++$this->reconnectTimes;
-                $this->transTimes--;
+            if (self::$reconnectTimes < 4 && $this->isBreak($e)) {
+                ++self::$reconnectTimes;
+                self::$transTimes--;
                 return $this->close()->transaction($callback);
             }
             $this->rollBack();
@@ -2364,7 +2362,7 @@ class Mokuyu
      */
     protected function getQueryCache(): ?array
     {
-        if ($this->cache === null || $this->queryParams['queryCache'] === null || $this->isFetchSql || $this->isAbort) {
+        if (self::$cache === null || $this->queryParams['queryCache'] === null || $this->isFetchSql || $this->isAbort) {
             return null;
         }
         $key    = $this->queryParams['queryCache']['key'] ?? null;
@@ -2389,7 +2387,7 @@ class Mokuyu
         //因为sql不会经过query和exec去请求数据库且初始化参数了，下面要初始化一下
         if ($data['data'] !== null) {
             $this->initQueryParams();
-            $this->cacheHits++;
+            self::$cacheHits++;
         }
         return $data;
     }
@@ -2400,7 +2398,7 @@ class Mokuyu
      */
     public function getCacheHits(): int
     {
-        return $this->cacheHits;
+        return self::$cacheHits;
     }
 
     /**
@@ -2441,7 +2439,7 @@ class Mokuyu
      */
     protected function appendErrorLogs(string $message)
     {
-        $this->errors[] = $message;
+        self::$errors[] = $message;
     }
 
     /**
@@ -2454,10 +2452,10 @@ class Mokuyu
         $class = $rtime > 1 ? 'style="color:#f00";' : '';
         $rtime = str_pad((round($rtime, 6)) . '', 8, '0');
         if (PHP_SAPI == 'cli') {
-            $this->logs[] = '[' . $rtime . 's] ' . $sql;
+            self::$logs[] = '[' . $rtime . 's] ' . $sql;
         }
         else {
-            $this->logs[] = '【<span ' . $class . '>' . $rtime . 's</span>】' . $sql;
+            self::$logs[] = '【<span ' . $class . '>' . $rtime . 's</span>】' . $sql;
         }
     }
 
@@ -2643,21 +2641,8 @@ class Mokuyu
         $connectionKey = md5(json_encode($options));
         try {
             if (!isset(self::$connections[$connectionKey])) {
-                $commands = [];
-                $dsn      = '';
-
-                // if (is_array($options)) {
-                //     foreach ($options as $option => $value) {
-                //         $option        = $this->parseName($option, 2);
-                //         $this->$option = $value;
-                //     }
-                // } else {
-                //     return null;
-                // }
-
-                // if (isset($this->port) && is_int($this->port * 1)) {
-                // $port = $this->port;
-                // }
+                $commands     = [];
+                $dsn          = '';
                 $server       = $options['server'];
                 $port         = $options['port'];
                 $username     = $options['username'];
@@ -2926,15 +2911,15 @@ class Mokuyu
     protected function cacheAction(string $key, $value = null, int $expire = 3600 * 24)
     {
         try {
-            if ($this->temDebug || $this->cache === null) {
+            if ($this->temDebug || self::$cache === null) {
                 return null;
             }
             $key = 'mokuyu:' . $key;
             if (is_null($value)) {
-                return $this->cache->get($key);
+                return self::$cache->get($key);
             }
             else {
-                return $this->cache->set($key, $value, $expire);
+                return self::$cache->set($key, $value, $expire);
             }
 
         } catch (\Psr\SimpleCache\InvalidArgumentException $e) {
