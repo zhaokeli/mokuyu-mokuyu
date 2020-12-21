@@ -1977,7 +1977,9 @@ class Mokuyu
      */
     public static function setCache(CacheInterface $obj): void
     {
-        self::$cache = $obj;
+        if (self::$cache === null) {
+            self::$cache = $obj;
+        }
     }
 
     public function setDec(string $field, int $num = 1)
