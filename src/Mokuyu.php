@@ -2960,7 +2960,8 @@ class Mokuyu
      */
     protected function greateSQL(string $sql, array $param): string
     {
-        if (count($param) !== count($param, 1)) {
+        // if (count($param) !== count($param, 1)) {
+        if (isset($param[0])) {
             $param = $param[0];
         }
         foreach ($param as $key => $value) {
