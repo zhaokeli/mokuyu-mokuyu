@@ -1100,7 +1100,14 @@ class Mokuyu
             $ckey        = $this->databaseName . ':' . $table_name . ':primaryid:';
             switch ($this->databaseType) {
                 case 'mysql':
-                    $sql         = 'SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=\'' . $this->databaseName . '\' and TABLE_NAME=\'' . $table_name . '\'';
+                    // $sql         = 'SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=\'' . $this->databaseName . '\' and TABLE_NAME=\'' . $table_name . '\'';
+                    $sql         = 'SELECT k.column_name'
+                        . ' FROM information_schema.table_constraints t'
+                        . ' JOIN information_schema.key_column_usage k'
+                        . ' USING (constraint_name,table_schema,table_name)'
+                        . ' WHERE t.constraint_type=\'PRIMARY KEY\''
+                        . ' AND t.table_schema=\'' . $this->databaseName . '\''
+                        . ' AND t.table_name=\'' . $table_name . '\'';
                     $ckey        .= md5($sql);
                     $primaryName = $this->cacheAction($ckey);
                     //已经查询过并且没有主键的情况直接返回
@@ -1108,7 +1115,7 @@ class Mokuyu
                         $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info        = $info->fetchAll(PDO::FETCH_ASSOC);
-                            $primaryName = $info[0]['COLUMN_NAME'] ?? '';
+                            $primaryName = $info[0]['column_name'] ?? '';
                         }
                     }
 
