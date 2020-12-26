@@ -9,6 +9,17 @@ use PDOException;
 class QueryPDOException extends PDOException
 {
     /**
+     * 当前请求绑定的参数
+     * @var array
+     */
+    protected array $bindParam = [];
+
+    /**
+     * 请求参数
+     * @var array
+     */
+    protected array $queryParam = [];
+    /**
      * 保存异常页面显示的额外Debug数据
      * @var array
      */
@@ -50,10 +61,12 @@ class QueryPDOException extends PDOException
      * @param array  $config
      * @param int    $code
      */
-    public function __construct(string $message = '', string $sql = '', array $config = [], $code = 10501)
+    public function __construct(string $message = '', string $sql = '', array $config = [], $code = 10501, array $bindParam = [], array $queryParam = [])
     {
-        $this->message = $message;
-        $this->code    = (int)$code;
+        $this->message    = $message;
+        $this->code       = (int)$code;
+        $this->bindParam  = $bindParam;
+        $this->queryParam = $queryParam;
 
         $this->setData('Database Status', [
             'Error Code'    => $code,
@@ -65,5 +78,15 @@ class QueryPDOException extends PDOException
         // $this->setData('SQL BindParam', $bindParam);
         $this->setData('Database Config', $config);
         parent::__construct($message, $this->$code);
+    }
+
+    public function getBindParam()
+    {
+        return $this->bindParam;
+    }
+
+    public function getQueryParam()
+    {
+        return $this->queryParam;
     }
 }

@@ -49,7 +49,7 @@ class Mokuyu
 
     /**
      * 事件类型：更新之后
-     * 参数：Mokuyu,sql,bindParam,result
+     * 参数：Mokuyu,sql,bindParam,result(更新结果)
      */
     public const EVENT_TYPE_UPDATE_AFTER = 'UpdateAfter';
 
@@ -61,7 +61,7 @@ class Mokuyu
 
     /**
      * 事件类型：插入之后
-     * 参数：Mokuyu,sql,bindParam,result
+     * 参数：Mokuyu,sql,bindParam,result(插入自增id)
      */
     public const EVENT_TYPE_INSERT_AFTER = 'InsertAfter';
 
@@ -70,6 +70,12 @@ class Mokuyu
      * 参数：Mokuyu,time(S.s),sql
      */
     public const EVENT_TYPE_SQL_LOG = 'SQLLog';
+
+    /**
+     * 事件类型：错误日志
+     * 参数：Mokuyu,error_msg
+     */
+    public const EVENT_TYPE_ERROR_LOG = 'ErrorLog';
 
     /**
      * pdo实例连接列表
@@ -559,7 +565,7 @@ class Mokuyu
                 return $this->exec('DELETE FROM ' . $table . $where);
             }
         } catch (Throwable | QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             return 0;
         }
 
@@ -623,10 +629,7 @@ class Mokuyu
             else {
                 $result = $this->pdoWrite->exec($sql);
             }
-            $t2 = microtime(true);
-            // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
-            $this->appendSqlLogs(($t2 - $t1), $sql);
-            $this->trigger(self::EVENT_TYPE_SQL_LOG, [($t2 - $t1), $sql]);
+
             //因为exec执行的命令除了 select insert update外不一定会有影响的行数,下面判断执行的状态码
             if (!$result
                 && stripos(trim($sql), 'select') !== 0
@@ -637,12 +640,12 @@ class Mokuyu
                     $result = true;
                 }
                 else {
-                    self::$errors[] = $this->pdoWrite->errorInfo()[2];
-                    $this->showError(end(self::$errors));
+                    $this->recordErrorLog($this->pdoWrite->errorInfo()[2]);
                     $result = false;
                 }
             }
             // $this->initQueryParams();
+            // throw new PDOException('test');
             self::$reconnectTimes = 0;
             return $result;
         } catch (Exception $e) {
@@ -652,17 +655,17 @@ class Mokuyu
             }
             $isTransaction && $this->rollback();
             if ($e instanceof PDOException) {
-                throw new QueryPDOException($e->getMessage(), $this->greateSQL($sql, $this->bindParam), $this->dbConfig, $e->getCode());
+                throw new QueryPDOException($e->getMessage(), $this->greateSQL($sql, $this->bindParam), $this->dbConfig, $e->getCode(), $this->bindParam, $this->queryParams);
             }
             else {
                 throw $e;
             }
 
         } finally {
+            $t2 = microtime(true);
+            $this->recordSqlLogs(($t2 - $t1), $sql);
             $this->initQueryParams();
         }
-
-        //        return 0;
     }
 
     /**
@@ -760,7 +763,7 @@ class Mokuyu
 
             return $this->exec('UPDATE ' . $table . ' SET ' . $field . '=' . $field . $operation . $num . ' ' . $where);
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -855,7 +858,7 @@ class Mokuyu
             }
             return $data;
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -1279,7 +1282,7 @@ class Mokuyu
 
             return $redata;
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -1329,7 +1332,7 @@ class Mokuyu
 
             return $query->fetchColumn() == 1;
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -1449,6 +1452,7 @@ class Mokuyu
                 $isMulData && $index++;
 
             }
+            $this->trigger(self::EVENT_TYPE_INSERT_BEFORE, [$sql ?? '', $this->bindParam]);
             $result = $this->exec($sql);
             if (is_string($result)) {
                 // return $result;
@@ -1464,14 +1468,14 @@ class Mokuyu
                 throw new QueryResultException('', 0, null, $result);
             }
             // $lastId = ;
-            $this->trigger(self::EVENT_TYPE_INSERT_BEFORE, [$sql ?? '', $this->bindParam]);
+
             $result = $this->pdoWrite->lastInsertId() ?: $result;
             $this->trigger(self::EVENT_TYPE_INSERT_AFTER, [$sql ?? '', $this->bindParam, $result]);
             return $result;
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -1657,7 +1661,7 @@ class Mokuyu
                 'pageSize' => $pageSize,
             ];
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -1722,13 +1726,8 @@ class Mokuyu
             else {
                 $query = $pdo->query($sql);
             }
-            $t2 = microtime(true);
-            // $rtime = str_pad((round(($t2 - $t1), 6)) . '', 8, '0');
-            $this->appendSqlLogs(($t2 - $t1), $sql);
-            $this->trigger(self::EVENT_TYPE_SQL_LOG, [($t2 - $t1), $sql]);
             if ($pdo->errorCode() != '00000') {
-                self::$errors[] = $pdo->errorInfo()[2];
-                $this->showError(end(self::$errors));
+                $this->recordErrorLog($pdo->errorInfo()[2]);
             }
             // $this->initQueryParams();
             if ($isReturnData) {
@@ -1748,12 +1747,14 @@ class Mokuyu
                 return $this->close()->query($sql, $param);
             }
             if ($e instanceof PDOException) {
-                throw new QueryPDOException($e->getMessage(), $this->greateSQL($sql, $this->bindParam), $this->dbConfig, $e->getCode());
+                throw new QueryPDOException($e->getMessage(), $this->greateSQL($sql, $this->bindParam), $this->dbConfig, $e->getCode(), $this->bindParam, $this->queryParams);
             }
             else {
                 throw $e;
             }
         } finally {
+            $t2 = microtime(true);
+            $this->recordSqlLogs(($t2 - $t1), $sql);
             $this->initQueryParams();
         }
     }
@@ -1852,7 +1853,7 @@ class Mokuyu
             }
             return $cacheData;
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -2200,7 +2201,7 @@ class Mokuyu
             $this->trigger(self::EVENT_TYPE_UPDATE_AFTER, [$sql ?? '', $this->bindParam, $result]);
             return $result;
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -2277,7 +2278,7 @@ class Mokuyu
             try {
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
-                $this->appendErrorLogs($e->getMessage());
+                $this->recordErrorLog($e->getMessage());
                 if ($this->temDebug) {
                     throw $e;
                 }
@@ -2319,7 +2320,7 @@ class Mokuyu
             try {
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
-                $this->appendErrorLogs($e->getMessage());
+                $this->recordErrorLog($e->getMessage());
                 if ($this->temDebug) {
                     throw $e;
                 }
@@ -2446,19 +2447,37 @@ class Mokuyu
      * 追加错误日志
      * @param string $message
      */
-    protected function appendErrorLogs(string $message)
-    {
-        self::$errors[] = $message;
-    }
+    // protected function recordErrorLog(string $message)
+    // {
+    //     self::$errors[] = $message;
+    // }
 
     /**
      * sql请求日志
      * @param float  $rtime
      * @param string $sql
      */
-    protected function appendSqlLogs(float $rtime, string $sql): void
+    // protected function recordSqlLogs(float $rtime, string $sql): void
+    // {
+    //     $class = $rtime > 1 ? 'style="color:#f00";' : '';
+    //     $rtime = str_pad((round($rtime, 6)) . '', 8, '0');
+    //     if (PHP_SAPI == 'cli') {
+    //         self::$logs[] = '[' . $rtime . 's] ' . $sql;
+    //     }
+    //     else {
+    //         self::$logs[] = '【<span ' . $class . '>' . $rtime . 's</span>】' . $sql;
+    //     }
+    // }
+    /**
+     * 记录日志
+     * @param float  $rtime
+     * @param string $sql
+     */
+    private function recordSqlLogs(float $rtime, string $sql): void
     {
         $class = $rtime > 1 ? 'style="color:#f00";' : '';
+        $sql   = $this->greateSQL($sql, $this->bindParam);
+        $this->trigger(self::EVENT_TYPE_SQL_LOG, [$rtime, $sql]);
         $rtime = str_pad((round($rtime, 6)) . '', 8, '0');
         if (PHP_SAPI == 'cli') {
             self::$logs[] = '[' . $rtime . 's] ' . $sql;
@@ -2972,7 +2991,8 @@ class Mokuyu
             $param = $param[0];
         }
         foreach ($param as $key => $value) {
-            $sql = preg_replace('/' . $key . '([^\w\d_])/', '\'' . $value . '\'$1', $sql);
+            // $sql = preg_replace('/' . $key . '([^\w\d_])/', '\'' . $value . '\'$1', $sql);
+            $sql = str_replace($key, '\'' . str_replace('\'', '\\\'', $value) . '\'', $sql);
         }
 
         return $sql;
@@ -3387,9 +3407,10 @@ class Mokuyu
      * @param string $str
      * @return void
      */
-    protected function showError(string $str): void
+    private function recordErrorLog(string $str): void
     {
-
+        self::$errors[] = $str;
+        $this->trigger(self::EVENT_TYPE_ERROR_LOG, [$str]);
     }
 
     /**
@@ -3494,7 +3515,7 @@ class Mokuyu
         } catch (QueryResultException $e) {
             return $e->getQueryResult();
         } catch (QueryParamException $e) {
-            $this->appendErrorLogs($e->getMessage());
+            $this->recordErrorLog($e->getMessage());
             if ($this->temDebug) {
                 throw $e;
             }
@@ -3553,8 +3574,13 @@ class Mokuyu
         $events = $this->eventList[$eventType] ?? [];
         foreach ($events as $handler) {
             if (is_callable($handler)) {
+                if (is_array($handler) && count($handler) == 2 && is_object($handler[0]) && is_string($handler[1])) {
+                    $redirect = new \ReflectionClass($handler[0]);
+                    $method   = $redirect->getMethod($handler[1]);
+                    $method->setAccessible(true);
+                }
                 array_unshift($eventData, $this);
-                $result = call_user_func_array($handler, [$eventData]);
+                $result = call_user_func_array($handler, $eventData);
                 if ($result === true) {
                     return;
                 }

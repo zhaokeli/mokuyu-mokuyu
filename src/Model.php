@@ -190,7 +190,54 @@ abstract class Model extends Mokuyu
         }
         $this->addEventListener(Mokuyu::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, [$this, 'handlerInitQuery']);
         $this->addEventListener(Mokuyu::EVENT_TYPE_RESET_QUERYPARAM, [$this, 'handlerResetQueryParam']);
+        $this->addEventListener(Mokuyu::EVENT_TYPE_INSERT_BEFORE, [$this, 'insertBefore']);
+        $this->addEventListener(Mokuyu::EVENT_TYPE_INSERT_AFTER, [$this, 'insertAfter']);
+        $this->addEventListener(Mokuyu::EVENT_TYPE_UPDATE_BEFORE, [$this, 'updateBefore']);
+        $this->addEventListener(Mokuyu::EVENT_TYPE_UPDATE_AFTER, [$this, 'updateAfter']);
         $this->handlerResetQueryParam();
+
+    }
+
+    /**
+     * 插入之前
+     */
+    protected function insertBefore(Mokuyu $db, string $sql, array $bindParam)
+    {
+
+    }
+
+    /**
+     * 插入之后
+     * @param Mokuyu $db
+     * @param string $sql
+     * @param array  $bindParam
+     * @param mixed  $primaryId
+     */
+    protected function insertAfter(Mokuyu $db, string $sql, array $bindParam, $primaryId)
+    {
+
+    }
+
+    /**
+     * 更新之前
+     * @param Mokuyu $db
+     * @param string $sql
+     * @param array  $bindParam
+     */
+    protected function updateBefore(Mokuyu $db, string $sql, array $bindParam)
+    {
+
+    }
+
+    /**
+     * 更新之后
+     * @param Mokuyu $db
+     * @param string $sql
+     * @param array  $bindParam
+     * @param int    $result
+     */
+    protected function updateAfter(Mokuyu $db, string $sql, array $bindParam, int $result)
+    {
 
     }
 
@@ -289,7 +336,7 @@ abstract class Model extends Mokuyu
     /**
      * 重置单次请求的参数值
      */
-    public function handlerResetQueryParam()
+    protected function handlerResetQueryParam()
     {
         $this->table($this->tableName);
     }
@@ -506,10 +553,10 @@ abstract class Model extends Mokuyu
     }
 
 
-    // /**
-    //  * 初始化请求参数
-    //  */
-    public function handlerInitQuery()
+    /**
+     * 初始化请求参数
+     */
+    protected function handlerInitQuery()
     {
         parent::tableMode((int)$this->temTableMode);
         parent::fieldMode((int)$this->temFieldMode);
