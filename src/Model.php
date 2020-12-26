@@ -8,6 +8,7 @@ use Psr\SimpleCache\CacheInterface;
 use Exception;
 use mokuyu\database\exception\QueryParamException;
 use PDOStatement;
+use PDOException;
 
 /**
  * 模型类,实例化一次进行一次查询
@@ -169,6 +170,7 @@ abstract class Model extends Mokuyu
      * Model constructor.
      * @param array $config
      * @param null  $tableName
+     * @throws PDOException
      */
     public function __construct(array $config = [], $tableName = null)
     {

@@ -1068,9 +1068,9 @@ class Mokuyu
      * @Author   mokuyu
      * @return mixed
      */
-    public function getLastSql()
+    public function getLastSql(): string
     {
-        return end(self::$logs);
+        return end(self::$logs) ?: '';
     }
 
     /**
@@ -2663,6 +2663,7 @@ class Mokuyu
      * @Author   mokuyu
      * @param array $options
      * @return PDO
+     * @throws PDOException
      */
     protected function buildPDO(array $options): PDO
     {
