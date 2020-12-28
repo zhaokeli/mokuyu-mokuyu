@@ -590,6 +590,7 @@ class Mokuyu
      */
     public function exec(string $sql, array $param = [])
     {
+        $t1 = microtime(true);
         //是否使用了事务
         $isTransaction = false;
         try {
@@ -607,7 +608,6 @@ class Mokuyu
             if ($this->isAbort) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
-            $t1 = microtime(true);
             if ($hasParam) {
                 $sth = $this->pdoWrite->prepare($sql);
 
@@ -1687,6 +1687,7 @@ class Mokuyu
      */
     public function query(string $sql, array $param = [])
     {
+        $t1 = microtime(true);
         try {
             //如果直接传sql语句来执行,没有设置table的话此值为true,直接返回数据,否则返回一个PDOStatement请求对象
             $isReturnData = false;
@@ -1716,7 +1717,7 @@ class Mokuyu
                 $pdo = $this->pdoRead ?: $this->pdoWrite;
             }
 
-            $t1    = microtime(true);
+
             $query = null;
             if ($hasParam) {
                 $query = $pdo->prepare($sql);
@@ -2279,9 +2280,9 @@ class Mokuyu
                 $this->operatorMap($data, $value, $value2);
             } catch (QueryParamException $e) {
                 $this->recordErrorLog($e->getMessage());
-                if ($this->temDebug) {
-                    throw $e;
-                }
+                // if ($this->temDebug) {
+                //     throw $e;
+                // }
             }
             $data = [$data => $value2];
         }
@@ -3022,7 +3023,7 @@ class Mokuyu
             'rand'         => false,
             'group'        => '',
             'limit'        => '',
-            'field'        => '*',
+            'field'        => '',
             'data'         => '',
             //强制使用索引,mysql查询的时候用
             'forceIndex'   => '',
