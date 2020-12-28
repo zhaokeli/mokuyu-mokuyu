@@ -77,7 +77,7 @@ class QueryPDOException extends PDOException
         unset($config['username'], $config['password']);
         // $this->setData('SQL BindParam', $bindParam);
         $this->setData('Database Config', $config);
-        parent::__construct($message, $this->$code);
+        parent::__construct($message, $this->code);
     }
 
     public function getBindParam()
