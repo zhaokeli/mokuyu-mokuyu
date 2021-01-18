@@ -1912,61 +1912,83 @@ class Mokuyu
     }
 
     /**
-     * @param string|array $field            返回的列,如果为*则返回所有字段
-     * @param string|null  $key              索引key,做为数组的索引,为null时跟select一样
-     * @param bool         $isDeleteIndexKey 如果有多列数据,是否从数组中删除索引key列
+     * @param mixed $valueField       返回的列,如果为*则返回所有字段
+     * @param mixed $keyField         索引key,做为数组的索引,为null时跟select一样
+     * @param bool  $isDeleteIndexKey 如果有多列数据,是否从数组中删除索引key列
      * @return array
      */
-    public function column($field, string $key = null, bool $isDeleteIndexKey = false)
+    public function column($valueField, string $keyField = null, bool $isDeleteIndexKey = false)
     {
-        $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
-        if (is_string($field)) {
-            $field = explode(',', $field);
-        }
-        $isSingle = count($field) === 1;
+        try {
+            $this->trigger(self::EVENT_TYPE_PRE_QUERYPARAM_BEFORE, []);
+            if (is_string($valueField)) {
+                $valueField = explode(',', $valueField);
+            }
+            $isSingle = count($valueField) === 1 && $valueField[0] !== '*';
 
-        // 传入字段的情况下
-        if ($field[0] != '*') {
-            if ($key === null) {
-                $this->field($field);
+            // 传入字段的情况下
+            if ($valueField[0] != '*') {
+                if ($keyField === null) {
+                    $this->field($valueField);
+                }
+                else {
+                    $valueField[] = $keyField;
+                    $this->field($valueField);
+                }
+            }
+            $cacheData = $this->getQueryCache();
+            if ($cacheData === null || $cacheData['data'] === null || $this->temDebug) {
+                $data = $this->select();
+                if (is_string($data)) {
+                    throw new QueryResultException('', 0, null, $data);
+                }
+                if ($keyField === null) {
+                    // if ($field[0] === '*') {
+                    //     return $list;
+                    // }
+                    if ($isSingle) {
+                        // return array_column($list, $field[0]);
+                        $data = array_column($data, $valueField[0]);
+                    }
+                    // else {
+                    //     return $list;
+                    // }
+                }
+                else {
+                    // $data = [];
+                    $newData = [];
+                    foreach ($data as $value) {
+                        if (($valueField[0] === '*' || !$isSingle)) {
+                            //从数组中删除键
+                            if ($isDeleteIndexKey) {
+                                $indexKey = $value[$keyField];
+                                unset($value[$keyField]);
+                                $newData[$indexKey] = $value;
+                            }
+                            else {
+                                $newData[$value[$keyField]] = $value;
+                            }
+                            // unset($data[$value[$keyField]][$keyField]);
+
+                        }
+                        else {
+                            $newData[$value[$keyField]] = $value[$valueField[0]];
+                            // unset($data[$keyField]);
+                        }
+                    }
+                    $data = $newData;
+                    // return $data;
+                }
+                $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
+                $cacheData = $data;
             }
             else {
-                $field[] = $key;
-                $this->field($field);
+                $cacheData = $cacheData['data'];
             }
+            return $cacheData;
+        } catch (QueryResultException $e) {
+            return $e->getQueryResult();
         }
-        $cacheData = $this->getQueryCache();
-        if ($cacheData === null || $cacheData['data'] === null || $this->temDebug) {
-            $data = $this->select();
-            if ($key === null) {
-                // if ($field[0] === '*') {
-                //     return $list;
-                // }
-                if ($isSingle) {
-                    // return array_column($list, $field[0]);
-                    $data = array_column($data, $field[0]);
-                }
-                // else {
-                //     return $list;
-                // }
-            }
-            else {
-                // $data = [];
-                foreach ($data as $value) {
-                    $data[$value[$key]] = ($field[0] === '*' || !$isSingle) ? $value : $value[$field[0]];
-                    //从数组中删除键
-                    if ($isDeleteIndexKey && is_array($data[$value[$key]]))
-                        unset($data[$value[$key]][$key]);
-                }
-                // return $data;
-            }
-            $cacheData === null or $this->cacheAction($cacheData['key'], $data, $cacheData['expire']);
-            $cacheData = $data;
-        }
-        else {
-            $cacheData = $cacheData['data'];
-        }
-        return $cacheData;
 
 
     }
