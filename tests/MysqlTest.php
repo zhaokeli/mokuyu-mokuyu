@@ -406,13 +406,46 @@ class MysqlTest extends Base
 
     public function testColumn()
     {
-        $this->db->table('Article')->where('article_id', 199)->column('views,title');
-        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('*');
-        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('*', 'article_id');
-        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('article_id');
-        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('views', 'article_id');
-        $this->db->table('Article')->where('article_id', '<>', [199, 200])->column('*', 'article_id', true);
-        $this->assertTrue(true);
+        $list = $this->db
+            ->table('Article')
+            ->where('article_id', '<>', [199, 200])
+            ->column('views', 'article_id');
+        $this->assertCount(2, $list);
+        $this->assertArrayNotHasKey(0, $list);
+
+        $list = $this->db
+            ->table('Article')
+            ->where('article_id', 199)
+            ->column('views,title');
+        $this->assertArrayHasKey(0, $list);
+        $this->assertArrayHasKey('views', $list[0]);
+
+        $list = $this->db->table('Article')
+                         ->where('article_id', '<>', [199, 200])
+                         ->fetchSql(false)
+                         ->column('*');
+        $this->assertCount(2, $list);
+        $this->assertArrayHasKey(0, $list);
+        $this->assertCount(9, $list[0]);
+
+        $list = $this->db->table('Article')
+                         ->where('article_id', '<>', [199, 200])
+                         ->column('*', 'article_id');
+        $this->assertCount(2, $list);
+        $this->assertArrayNotHasKey(0, $list);
+
+
+        $list = $this->db->table('Article')
+                         ->where('article_id', '<>', [199, 200])
+                         ->column('article_id');
+        $this->assertArrayHasKey(0, $list);
+        $this->assertIsNotArray($list[0]);
+
+        $list = $this->db->table('Article')
+                         ->where('article_id', '<>', [199, 200])
+                         ->column('*', 'article_id', true);
+        $this->assertArrayNotHasKey(0, $list);
+        $this->assertArrayNotHasKey('article_id', $list[199]);
     }
 
     public function testPage()
