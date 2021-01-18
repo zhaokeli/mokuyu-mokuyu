@@ -608,11 +608,13 @@ class Mokuyu
             if ($this->isAbort) {
                 die($this->greateSQL($sql, $this->bindParam));
             }
+            $result = 0;
             if ($hasParam) {
                 $sth = $this->pdoWrite->prepare($sql);
 
                 if (count($this->bindParam) == count($this->bindParam, 1)) {
                     $sth->execute($this->bindParam);
+                    $result = $sth->rowCount();
                 }
                 else {
                     //批量执行操作
@@ -620,11 +622,12 @@ class Mokuyu
                     $isTransaction = true;
                     foreach ($this->bindParam as $key => $value) {
                         $sth->execute($value);
+                        $result += $sth->rowCount();
                     }
                     $isTransaction = false;
                     $this->commit();
                 }
-                $result = $sth->rowCount();
+
             }
             else {
                 $result = $this->pdoWrite->exec($sql);
