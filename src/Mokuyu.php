@@ -1790,7 +1790,11 @@ class Mokuyu
      */
     public function rollback(): bool
     {
-        return (bool)$this->pdoWrite->exec('ROLLBACK TO SAVEPOINT dbback_' . self::$transTimes--);
+        //如果没有启动过事务直接返回true
+        if (self::$transTimes > 0) {
+            return (bool)$this->pdoWrite->exec('ROLLBACK TO SAVEPOINT dbback_' . self::$transTimes--);
+        }
+        return true;
     }
 
     /**
