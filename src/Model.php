@@ -314,6 +314,8 @@ abstract class Model extends Mokuyu
             $table_name = $this->queryParams['table'];
             //这里一定要判断下$table_name是不是为空,因为有些是没有表名字的
             if ($table_name && $fields && $this->autoCreateTimeFields) {
+                $table_name = $this->tablePrefix($table_name);
+                //$this->parseTable($table_name);
                 if (!in_array($this->createTimeField, $fields)) {
                     $sql = 'ALTER TABLE ' . $table_name . ' ADD ' . $this->yinhao . $this->createTimeField . $this->yinhao . ' int(11) unsigned NOT NULL DEFAULT \'0\' COMMENT \'记录创建时间\'';
                     $this->pdoWrite->exec($sql);
