@@ -631,19 +631,19 @@ class Mokuyu
             }
 
             //因为exec执行的命令除了 select insert update外不一定会有影响的行数,下面判断执行的状态码
-            if (!$result
-                && stripos(trim($sql), 'select') !== 0
-                && stripos(trim($sql), 'update') !== 0
-                && stripos(trim($sql), 'insert') !== 0) {
-                $err = $this->pdoWrite->errorInfo();
-                if ($err[0] === '00000' || $err[0] === '01000') {
-                    $result = true;
-                }
-                else {
-                    $this->recordErrorLog($this->pdoWrite->errorInfo()[2]);
-                    $result = false;
-                }
-            }
+            // if (!$result
+            //     && stripos(trim($sql), 'select') !== 0
+            //     && stripos(trim($sql), 'update') !== 0
+            //     && stripos(trim($sql), 'insert') !== 0) {
+            //     $err = $this->pdoWrite->errorInfo();
+            //     if ($err[0] === '00000' || $err[0] === '01000') {
+            //         $result = true;
+            //     }
+            //     else {
+            //         $this->recordErrorLog($this->pdoWrite->errorInfo()[2]);
+            //         $result = false;
+            //     }
+            // }
             // $this->initQueryParams();
             // throw new PDOException('test');
             self::$reconnectTimes = 0;
