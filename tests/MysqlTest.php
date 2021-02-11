@@ -624,4 +624,29 @@ class MysqlTest extends Base
         $this->assertTrue(in_array('kl_article', $tables));
     }
 
+    public function testFieldExclude()
+    {
+        $info = $this->db
+            ->table('article')
+            ->order('article_id desc')
+            ->get();
+        $this->assertArrayHasKey('create_time', $info);
+        $info = $this->db
+            ->table('article')
+            ->fieldExclude('create_time')
+            ->order('article_id desc')
+            ->get();
+        $this->assertArrayNotHasKey('create_time', $info);
+    }
+
+    public function testUpsertByUniquie()
+    {
+        $data = [
+            'article_id' => 203,
+            'title'      => 'upsert',
+            'views'      => rand(10000, 99999),
+        ];
+        $data = $this->db->table('article')->upsertByUnique($data);
+        $this->assertEquals(1, $data);
+    }
 }

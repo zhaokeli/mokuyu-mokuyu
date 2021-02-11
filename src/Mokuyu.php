@@ -709,6 +709,18 @@ class Mokuyu
     }
 
     /**
+     * 字段排除
+     * @param string|array $field
+     * @return $this
+     */
+    public function fieldExclude($field): Mokuyu
+    {
+        $this->queryParams['fieldExclude'] = $field;
+
+        return $this;
+    }
+
+    /**
      * 设置字段映射
      * @DateTime 2019-10-16
      * @Author   mokuyu
@@ -2244,6 +2256,82 @@ class Mokuyu
     }
 
     /**
+     * 更新或插入,当数据不存在时则插入,需要数据中有主键或唯一索引,否则将会一直插入
+     * @param array $data
+     * @return mixed
+     * @throws QueryParamException
+     * @throws Exception
+     */
+    public function upsertByUnique(array $data)
+    {
+        try {
+            // $srcTable = $this->queryParams['table'];
+            $this->buildSqlConf();
+            $table = $this->queryParams['table'];
+            $cols  = [];
+            $vals  = [];
+            //取表的所有字段
+            $table_fields = $this->getFields();
+            $pk           = $this->getPK();
+            foreach ($data as $key => $value) {
+                $field = lcfirst($key);
+                $field = strtolower(preg_replace('/([A-Z])/', '_$1', $field));
+                if (($table_fields && !in_array($field, $table_fields))) {
+                    //过滤掉数据库中没有的字段,和主键
+                    continue;
+                }
+                $info      = $this->parseFormatField($key);
+                $column    = $this->yinhao . $info['field'] . $this->yinhao;
+                $columns[] = $column;
+                $col       = ':' . $info['field'];
+
+                $this->appendBindParam($col, $value);
+                $cols[] = $field;
+                $vals[] = $col;
+            }
+            $params    = array_combine($cols, $vals);
+            $updateSql = [];
+            foreach ($params as $key => $value) {
+                $paramName                   = $value . '_update';
+                $this->bindParam[$paramName] = $this->bindParam[$value];
+                $updateSql[]                 = $this->yinhao . $key . $this->yinhao . '=' . $paramName;
+            }
+            $sql    = 'INSERT INTO ' . $table . ' (' . implode(',', $cols) . ') VALUES (' . implode(',', $vals) . ') ON DUPLICATE KEY UPDATE ' . implode(',', $updateSql);
+            $result = $this->exec($sql);
+            if (is_string($result)) {
+                // return $result;
+                throw new QueryResultException('', 0, null, $result);
+            }
+            // if ($this->databaseType === 'oracle') {
+            //     if ($pk && $result) {
+            //         $result = $this->table($srcTable)->field($pk)->order($pk . ' desc')->limit(1)->get();
+            //         $result = $result ?: 1;
+            //     }
+            //
+            //     // return $result;
+            //     throw new QueryResultException('', 0, null, $result);
+            // }
+            // $lastId = ;
+
+            // $result = $this->pdoWrite->lastInsertId() ?: $result;
+            // $this->trigger(self::EVENT_TYPE_INSERT_AFTER, [$sql ?? '', $this->bindParam, $result]);
+            return $result;
+        } catch (QueryResultException $e) {
+            return $e->getQueryResult();
+        } catch (QueryParamException $e) {
+            $this->recordErrorLog($e->getMessage());
+            if ($this->temDebug) {
+                throw $e;
+            }
+            else {
+                return 0;
+            }
+        } finally {
+            $this->initQueryParams();
+        }
+    }
+
+    /**
      * 强制使用写pdo在一些强一至性的场景可以使用
      * @DateTime 2020-01-06
      * @Author   mokuyu
@@ -2524,6 +2612,21 @@ class Mokuyu
             $field = '*';
         }
         $this->queryParams['field'] = $this->parseSelectFields($field);
+        $fieldExclude               = $this->queryParams['fieldExclude'];
+        if ($fieldExclude) {
+            $fieldExclude = explode(',', $this->parseSelectFields($fieldExclude));
+            if ($this->queryParams['field'] === '*') {
+                $fields                     = $this->getFields();
+                $fields                     = $this->yinhao . implode($this->yinhao . ',' . $this->yinhao, $fields) . $this->yinhao;
+                $fields                     = explode(',', $fields);
+                $this->queryParams['field'] = array_diff($fields, $fieldExclude);
+            }
+            else {
+                $this->queryParams['field'] = array_diff(explode(',', $this->queryParams['field']), $fieldExclude);
+            }
+            $this->queryParams['field'] = implode(',', $this->queryParams['field']);
+        }
+
     }
 
     protected function buildForceIndex(): void
@@ -3053,6 +3156,7 @@ class Mokuyu
             'group'        => '',
             'limit'        => '',
             'field'        => '',
+            'fieldExclude' => '',
             'data'         => '',
             //强制使用索引,mysql查询的时候用
             'forceIndex'   => '',
