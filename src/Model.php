@@ -166,6 +166,15 @@ abstract class Model extends Mokuyu
     protected array $append = [];
 
     /**
+     * 返回表名字
+     * @return string|null
+     */
+    public function getTableName(): ?string
+    {
+        return $this->tableName;
+    }
+
+    /**
      * 初始化模型
      * Model constructor.
      * @param array $config
