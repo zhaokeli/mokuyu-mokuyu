@@ -1825,9 +1825,12 @@ class Mokuyu
         //如果条件为空,则查找是不是含有主键,有主键则更新,没有则插入
         if (empty($this->queryParams['where'])) {
             $pk = $this->getPK();
-            if ($pk && isset($datas[$pk])) {
-                $map = [$pk => $datas[$pk]];
-                unset($datas[$pk]);
+            if ($pk && (isset($datas[$pk]) || isset($datas[0][$pk]))) {
+                $map = [];
+                if (isset($datas[$pk])) {
+                    $map = [$pk => $datas[$pk]];
+                    unset($datas[$pk]);
+                }
                 return $this->where($map)->update($datas);
             }
             else {
