@@ -1133,7 +1133,8 @@ class Mokuyu
                         $info = $this->pdoRead->query($sql);
                         if ($info) {
                             $info        = $info->fetchAll(PDO::FETCH_ASSOC);
-                            $primaryName = $info[0]['column_name'] ?? '';
+                            $info        = array_change_key_case($info[0], CASE_LOWER);
+                            $primaryName = $info['column_name'] ?? '';
                         }
                     }
 
@@ -1148,6 +1149,7 @@ class Mokuyu
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
+                                $value = array_change_key_case($value, CASE_LOWER);
                                 if ($value['pk'] == 1) {
                                     $primaryName = $value['name'];
                                     break;
@@ -1177,6 +1179,7 @@ class Mokuyu
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
+                                $value       = array_change_key_case($value, CASE_LOWER);
                                 $primaryName = $value['colname'];
 
                                 break;
@@ -1216,7 +1219,8 @@ class Mokuyu
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
-                                $primaryName = $value['COLUMN_NAME'];
+                                $value       = array_change_key_case($value, CASE_LOWER);
+                                $primaryName = $value['column_name'];
 
                                 break;
                             }
@@ -1249,6 +1253,7 @@ class Mokuyu
                         if ($info) {
                             $info = $info->fetchAll(PDO::FETCH_ASSOC);
                             foreach ($info as $key => $value) {
+                                $value       = array_change_key_case($value, CASE_LOWER);
                                 $primaryName = $value['column_name'];
 
                                 break;
